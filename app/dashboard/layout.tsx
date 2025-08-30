@@ -45,34 +45,34 @@ export default function DashboardLayout({
 
   return (
     <AuroraBackground>
-      {/* Mobile Menu Button */}
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={toggleSidebar}
-        className="fixed top-4 left-4 z-50 bg-white/10 border-white/20 text-white hover:bg-white/20 md:hidden"
-      >
-        <Menu className="h-5 w-5" />
-      </Button>
+             {/* Menu Button - Visible on all screen sizes */}
+       <Button
+         variant="outline"
+         size="icon"
+         onClick={toggleSidebar}
+         className="fixed top-4 left-4 z-50 bg-white/10 border-white/20 text-white hover:bg-white/20"
+       >
+         <Menu className="h-5 w-5" />
+       </Button>
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-40 w-64 bg-transparent  border-r border-white/20 transform transition-transform duration-300 ease-in-out ${
+      <div className={`fixed inset-y-0 left-0 z-40 w-64 bg-transparent border-r border-white/20 transform transition-transform duration-300 ease-in-out ${
         isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } md:translate-x-0`}>
+      }`}>
         {/* Sidebar Header */}
         <div className="flex items-center justify-between p-6 border-b border-white/20">
           <div className="flex items-center space-x-3">
             <img src="/assets/logo.png" alt="logo" className="h-8 w-8" />
             <h2 className="text-xl font-bold text-white">Zain Gems</h2>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleSidebar}
-            className="text-white hover:bg-white/20 md:hidden"
-          >
-            <X className="h-5 w-5" />
-          </Button>
+                     <Button
+             variant="ghost"
+             size="icon"
+             onClick={toggleSidebar}
+             className="text-white hover:bg-white/20"
+           >
+             <X className="h-5 w-5" />
+           </Button>
         </div>
 
         {/* Navigation Menu */}
@@ -108,7 +108,7 @@ export default function DashboardLayout({
       </div>
 
       {/* Main Content */}
-      <div className={`md:ml-64 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
+      <div className={`transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
         {children}
       </div>
 
