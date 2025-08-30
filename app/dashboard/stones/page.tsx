@@ -347,12 +347,12 @@ export default function StonesPage() {
   };
 
   const getStatusBadge = (status: Stone['status']) => {
-    const variants = {
+    const variants: Record<Stone['status'], "default" | "secondary" | "destructive"> = {
       "In Stock": "default",
       "Sold": "destructive",
       "Pending": "secondary"
     };
-    return <Badge variant={variants[status] as any}>{status}</Badge>;
+    return <Badge variant={variants[status]}>{status}</Badge>;
   };
 
   const getProfitLossDisplay = (profitLoss: number | null) => {
