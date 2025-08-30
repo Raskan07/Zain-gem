@@ -128,7 +128,7 @@ export default function Dashboard() {
       "Sold": "destructive",
       "Certification Pending": "outline"
     };
-    return <Badge variant={variants[status] as any}>{status}</Badge>;
+    return <Badge variant={variants[status] as "default" | "secondary" | "destructive" | "outline"}>{status}</Badge>;
   };
 
   return (
