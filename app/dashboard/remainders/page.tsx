@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, Plus, Edit, Trash2, Eye, Upload, X } from "lucide-react";
-import { format, differenceInDays, parseISO } from "date-fns";
+import { format, differenceInDays, parseISO, isAfter, isBefore } from "date-fns";
 import { cn } from "@/lib/utils";
 import { db, storage } from "@/lib/firebase";
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "firebase/firestore";
@@ -63,6 +63,22 @@ export default function RemaindersPage() {
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [selectedRemainder, setSelectedRemainder] = useState<Remainder | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+
+  // Helper function to calculate days remaining from today
+  const calculateDaysRemaining = (paymentDate: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
+    const payment = new Date(paymentDate);
+    payment.setHours(0, 0, 0, 0);
+    return differenceInDays(payment, today);
+  };
+
+  // Helper function to get current status based on payment date
+  const getCurrentStatus = (paymentDate: Date, originalStatus: string) => {
+    if (originalStatus === "paid") return "paid";
+    const daysRemaining = calculateDaysRemaining(paymentDate);
+    return daysRemaining < 0 ? "overdue" : "pending";
+  };
 
   // Fetch remainders from Firebase
   useEffect(() => {
@@ -208,7 +224,7 @@ export default function RemaindersPage() {
       </Dialog>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card className="backdrop-blur-sm bg-white/10 border-white/20">
           <CardHeader className="pb-2">
             <CardTitle className="text-white text-lg">Total Remainders</CardTitle>
@@ -223,7 +239,7 @@ export default function RemaindersPage() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold text-yellow-400">
-              {remainders.filter(r => r.status === "pending").length}
+              {remainders.filter(r => getCurrentStatus(r.paymentReceivingDate, r.status) === "pending").length}
             </p>
           </CardContent>
         </Card>
@@ -233,7 +249,7 @@ export default function RemaindersPage() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold text-red-400">
-              {remainders.filter(r => r.status === "overdue").length}
+              {remainders.filter(r => getCurrentStatus(r.paymentReceivingDate, r.status) === "overdue").length}
             </p>
           </CardContent>
         </Card>
@@ -244,6 +260,24 @@ export default function RemaindersPage() {
           <CardContent>
             <p className="text-2xl font-bold text-green-400">
               LKR {remainders.reduce((sum, r) => sum + r.sellingPrice, 0).toLocaleString()}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="backdrop-blur-sm bg-white/10 border-white/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-white text-lg">Next Payment Due</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold text-blue-400">
+              {
+                (() => {
+                  const pending = remainders.filter(r => getCurrentStatus(r.paymentReceivingDate, r.status) === "pending");
+                  if (pending.length === 0) return "No pending";
+                  const minDays = Math.min(...pending.map(r => calculateDaysRemaining(r.paymentReceivingDate)));
+                  if (minDays === 0) return "Due today";
+                  return `${minDays} days`;
+                })()
+              }
             </p>
           </CardContent>
         </Card>
@@ -280,12 +314,18 @@ export default function RemaindersPage() {
                     <span className="text-white font-medium">LKR {remainder.sellingPrice.toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-white/60">Duration:</span>
-                    <span className={`font-bold ${remainder.durationInDays < 0 ? 'text-red-400' : 'text-green-400'}`}>
-                      {remainder.durationInDays < 0 ? 
-                        `${Math.abs(remainder.durationInDays)}d overdue` : 
-                        `${remainder.durationInDays}d`
-                      }
+                    <span className="text-white/60">Days Left:</span>
+                    <span className={`font-bold ${calculateDaysRemaining(remainder.paymentReceivingDate) < 0 ? 'text-red-400' : 'text-green-400'}`}>
+                      {(() => {
+                        const daysLeft = calculateDaysRemaining(remainder.paymentReceivingDate);
+                        if (daysLeft < 0) {
+                          return `${Math.abs(daysLeft)}d overdue`;
+                        } else if (daysLeft === 0) {
+                          return "Due today";
+                        } else {
+                          return `${daysLeft}d left`;
+                        }
+                      })()}
                     </span>
                   </div>
                   <div className="flex justify-between">
