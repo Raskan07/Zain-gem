@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,10 @@ import { cn } from "@/lib/utils";
 import { db, storage } from "@/lib/firebase";
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
+// If the file exists at the correct path, ensure it is named 'customCard.tsx' and exports 'CustomCard'.
+// If the file is named differently or located elsewhere, update the import path accordingly.
+// Example if the file is named 'CustomCard.tsx':
+import CustomCard from "@/components/sub-componets/CustomCard";
 
 // Interfaces
 interface Remainder {
@@ -56,6 +61,7 @@ interface NewRemainder {
 }
 
 export default function RemaindersPage() {
+  const router = useRouter();
   const [remainders, setRemainders] = useState<Remainder[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingRemainder, setEditingRemainder] = useState<Remainder | null>(null);
@@ -63,6 +69,17 @@ export default function RemaindersPage() {
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [selectedRemainder, setSelectedRemainder] = useState<Remainder | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+
+  // add archive state + handler (archives persisted to Firestore)
+  const [archives, setArchives] = useState<Remainder[]>([]);
+  const [showArchivesModal, setShowArchivesModal] = useState(false);
+  // show details for a specific archived card
+  const [selectedArchive, setSelectedArchive] = useState<Remainder | null>(null);
+  const [showArchiveDetailModal, setShowArchiveDetailModal] = useState(false);
+  const openArchiveDetail = (arc: Remainder) => {
+    setSelectedArchive(arc);
+    setShowArchiveDetailModal(true);
+  };
 
   // Helper function to calculate days remaining from today
   const calculateDaysRemaining = (paymentDate: Date) => {
@@ -184,6 +201,49 @@ export default function RemaindersPage() {
     }
   };
 
+  const handleArchiveRemainder = async (id: string) => {
+    const rem = remainders.find(r => r.id === id);
+    if (!rem) return;
+    const archivedData = {
+      ...rem,
+      paymentReceived: true,
+      status: "paid",
+      archivedAt: new Date(),
+    } as any;
+
+    try {
+      // persist to Firestore 'archives' collection
+      await addDoc(collection(db, "archives"), {
+        ...archivedData,
+        // ensure Firestore gets proper Date objects
+        sellingDate: rem.sellingDate,
+        paymentReceivingDate: rem.paymentReceivingDate,
+        createdAt: rem.createdAt,
+        updatedAt: new Date(),
+        archivedAt: new Date(),
+      });
+
+      // remove from remainders collection
+      await deleteDoc(doc(db, "remainders", id));
+
+      // update local state for immediate UI feedback
+      setArchives((prev) => [archivedData as Remainder, ...prev]);
+      setRemainders((prev) => prev.filter((r) => r.id !== id));
+
+      // close any open detail/edit modals for that remainder
+      if (selectedRemainder?.id === id) {
+        setSelectedRemainder(null);
+        setShowDetailModal(false);
+      }
+      if (editingRemainder?.id === id) {
+        setEditingRemainder(null);
+      }
+    } catch (error) {
+      console.error("Error archiving remainder:", error);
+      alert("Failed to archive remainder. See console for details.");
+    }
+  };
+
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Primary Add Remainder Button */}
@@ -281,6 +341,24 @@ export default function RemaindersPage() {
             </p>
           </CardContent>
         </Card>
+        <Card className="backdrop-blur-sm bg-white/10 border-white/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-white text-lg">Archived</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <p className="text-2xl font-bold text-white">{archives.length}</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push("/dashboard/remainders/archives")}
+                className="text-green-400 hover:text-green-300 h-8 px-2"
+              >
+                View
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Compact Remainders Table */}
@@ -291,89 +369,20 @@ export default function RemaindersPage() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {remainders.map((remainder) => (
-              <div 
-                key={remainder.id} 
-                className="p-4 backdrop-blur-sm bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-all cursor-pointer"
-                onClick={() => {
+              <CustomCard
+                key={remainder.id}
+                remainder={remainder}
+                onDetail={() => {
                   setSelectedRemainder(remainder);
                   setShowDetailModal(true);
                 }}
-              >
-                <div className="flex justify-between items-start mb-3">
-                  <h3 className="font-bold text-white text-lg">{remainder.stoneName}</h3>
-                  {getStatusBadge(remainder.status)}
-                </div>
-                
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-white/60">Weight:</span>
-                    <span className="text-white font-medium">{remainder.stoneWeight}crt</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-white/60">Selling Price:</span>
-                    <span className="text-white font-medium">LKR {remainder.sellingPrice.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-white/60">Days Left:</span>
-                    <span className={`font-bold ${calculateDaysRemaining(remainder.paymentReceivingDate) < 0 ? 'text-red-400' : 'text-green-400'}`}>
-                      {(() => {
-                        const daysLeft = calculateDaysRemaining(remainder.paymentReceivingDate);
-                        if (daysLeft < 0) {
-                          return `${Math.abs(daysLeft)}d overdue`;
-                        } else if (daysLeft === 0) {
-                          return "Due today";
-                        } else {
-                          return `${daysLeft}d left`;
-                        }
-                      })()}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-white/60">Buyer:</span>
-                    <span className="text-white font-medium">{remainder.buyerType === "local" ? "Local" : "Chinese"}</span>
-                  </div>
-                </div>
-
-                <div className="flex justify-between items-center mt-4 pt-3 border-t border-white/10">
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setEditingRemainder(remainder);
-                      }}
-                      className="text-blue-400 hover:text-blue-300 h-8 px-2"
-                    >
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteRemainder(remainder.id);
-                      }}
-                      className="text-red-400 hover:text-red-300 h-8 px-2"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                  {remainder.receiptImage && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openReceiptModal(remainder.receiptImage!);
-                      }}
-                      className="text-green-400 hover:text-green-300 h-8 px-2"
-                    >
-                      <Eye className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-              </div>
+                onEdit={() => setEditingRemainder(remainder)}
+                onDelete={() => handleDeleteRemainder(remainder.id)}
+                onArchive={() => handleArchiveRemainder(remainder.id)}
+                onViewReceipt={() => remainder.receiptImage && openReceiptModal(remainder.receiptImage)}
+                getStatusBadge={getStatusBadge}
+                calculateDaysRemaining={calculateDaysRemaining}
+              />
             ))}
           </div>
         </CardContent>
@@ -415,18 +424,18 @@ export default function RemaindersPage() {
 
       {/* Detail Modal */}
       <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
-        <DialogContent className="max-w-4xl backdrop-blur-xl bg-white/5 border border-white/20 text-white shadow-2xl">
+        <DialogContent className="max-w-3xl w-full md:w-[90vw] lg:w-[60vw] xl:w-[50vw] backdrop-blur-xl bg-white/5 border border-white/20 text-white shadow-2xl overflow-x-auto">
           <DialogHeader className="pb-6">
             <DialogTitle className="text-white text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text ">
               {selectedRemainder?.stoneName} - Full Details
             </DialogTitle>
           </DialogHeader>
           {selectedRemainder && (
-            <div className="space-y-6">
+            <div className="space-y-6 w-full">
               {/* Stone Details Section */}
-              <div className="p-6 backdrop-blur-sm bg-white/5 rounded-lg border border-white/10">
+              <div className="p-6 backdrop-blur-sm bg-white/5 rounded-lg border border-white/10 w-full">
                 <h3 className="text-xl font-bold text-white border-b border-white/20 pb-2 mb-4">Stone Information</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                   <div>
                     <span className="text-white/60">Stone Name:</span>
                     <p className="text-white font-semibold">{selectedRemainder.stoneName}</p>
@@ -455,9 +464,9 @@ export default function RemaindersPage() {
               </div>
 
               {/* Dates Section */}
-              <div className="p-6 backdrop-blur-sm bg-white/5 rounded-lg border border-white/10">
+              <div className="p-6 backdrop-blur-sm bg-white/5 rounded-lg border border-white/10 w-full">
                 <h3 className="text-xl font-bold text-white border-b border-white/20 pb-2 mb-4">Important Dates</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                   <div>
                     <span className="text-white/60">Selling Date:</span>
                     <p className="text-white font-semibold">{format(selectedRemainder.sellingDate, "PPP")}</p>
@@ -466,7 +475,7 @@ export default function RemaindersPage() {
                     <span className="text-white/60">Payment Due Date:</span>
                     <p className="text-white font-semibold">{format(selectedRemainder.paymentReceivingDate, "PPP")}</p>
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1 md:col-span-2">
                     <span className="text-white/60">Duration:</span>
                     <p className={`font-bold text-lg ${selectedRemainder.durationInDays < 0 ? 'text-red-400' : 'text-green-400'}`}>
                       {selectedRemainder.durationInDays < 0 ? 
@@ -479,9 +488,9 @@ export default function RemaindersPage() {
               </div>
 
               {/* Ownership & Buyer Section */}
-              <div className="p-6 backdrop-blur-sm bg-white/5 rounded-lg border border-white/10">
+              <div className="p-6 backdrop-blur-sm bg-white/5 rounded-lg border border-white/10 w-full">
                 <h3 className="text-xl font-bold text-white border-b border-white/20 pb-2 mb-4">Ownership & Buyer</h3>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
                   <div>
                     <span className="text-white/60">Stone Ownership:</span>
                     <p className="text-white font-semibold">{selectedRemainder.stoneOwner === "me" ? "My Stone" : "Borrowed Stone"}</p>
@@ -506,14 +515,14 @@ export default function RemaindersPage() {
               </div>
 
               {/* Status & Actions */}
-              <div className="p-6 backdrop-blur-sm bg-white/5 rounded-lg border border-white/10">
+              <div className="p-6 backdrop-blur-sm bg-white/5 rounded-lg border border-white/10 w-full">
                 <h3 className="text-xl font-bold text-white border-b border-white/20 pb-2 mb-4">Status & Actions</h3>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between w-full gap-4">
                   <div className="flex items-center gap-4">
                     <span className="text-white/60">Status:</span>
                     {getStatusBadge(selectedRemainder.status)}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Button
                       variant="outline"
                       onClick={() => {
@@ -525,6 +534,19 @@ export default function RemaindersPage() {
                       <Edit className="h-4 w-4 mr-2" />
                       Edit
                     </Button>
+
+                    {/* Payment Received in detail modal */}
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        handleArchiveRemainder(selectedRemainder.id);
+                        setShowDetailModal(false);
+                      }}
+                      className="border-green-500/30 text-green-400 hover:bg-green-500/10"
+                    >
+                      Payment Received
+                    </Button>
+
                     {selectedRemainder.receiptImage && (
                       <Button
                         variant="outline"
@@ -540,6 +562,122 @@ export default function RemaindersPage() {
                     )}
                   </div>
                 </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Archives Modal */}
+      <Dialog open={showArchivesModal} onOpenChange={setShowArchivesModal}>
+        <DialogContent className="max-w-4xl backdrop-blur-md bg-white/10 border-white/20 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-white text-2xl font-bold">Archived Remainders</DialogTitle>
+          </DialogHeader>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            {archives.length === 0 && (
+              <p className="text-white/60">No archived items.</p>
+            )}
+            {archives.map((arc) => (
+              <div
+                key={arc.id}
+                className="p-4 backdrop-blur-sm bg-white/5 rounded-lg border border-white/10 cursor-pointer hover:bg-white/10 transition-all"
+                onClick={() => openArchiveDetail(arc)}
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <h4 className="font-semibold text-white">{arc.stoneName}</h4>
+                  <span className="text-white/60">{arc.buyerType === "local" ? "Local" : "Chinese"}</span>
+                </div>
+                <div className="text-sm text-white/80">
+                  <div>Weight: {arc.stoneWeight}crt</div>
+                  <div>Selling Price: LKR {arc.sellingPrice.toLocaleString()}</div>
+                  <div>Archived: {arc.paymentReceived ? "Yes" : "No"}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Archived Remainder Detail Dialog */}
+      <Dialog open={showArchiveDetailModal} onOpenChange={setShowArchiveDetailModal}>
+        <DialogContent className="max-w-4xl backdrop-blur-xl bg-white/5 border border-white/20 text-white shadow-2xl">
+          <DialogHeader className="pb-4">
+            <DialogTitle className="text-white text-2xl font-bold">
+              {selectedArchive?.stoneName || "Archive detail"}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedArchive && (
+            <div className="space-y-6">
+              <div className="p-4 backdrop-blur-sm bg-white/5 rounded-lg border border-white/10">
+                <h4 className="text-lg font-semibold text-white mb-2">Stone Information</h4>
+                <div className="grid grid-cols-2 gap-3 text-white/90">
+                  <div>
+                    <span className="text-white/60">Weight:</span>
+                    <p className="font-medium">{selectedArchive.stoneWeight}crt</p>
+                  </div>
+                  <div>
+                    <span className="text-white/60">Selling Price:</span>
+                    <p className="font-medium">LKR {selectedArchive.sellingPrice.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <span className="text-white/60">Stone Cost:</span>
+                    <p className="font-medium">LKR {selectedArchive.stoneCost.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <span className="text-white/60">My Profit:</span>
+                    <p className="text-green-400 font-medium">LKR {selectedArchive.myProfit?.toLocaleString() || '0'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 backdrop-blur-sm bg-white/5 rounded-lg border border-white/10">
+                <h4 className="text-lg font-semibold text-white mb-2">Buyer & Ownership</h4>
+                <div className="grid grid-cols-2 gap-3 text-white/90">
+                  <div>
+                    <span className="text-white/60">Buyer Type:</span>
+                    <p className="font-medium">{selectedArchive.buyerType === "local" ? "Local" : "Chinese"}</p>
+                  </div>
+                  <div>
+                    <span className="text-white/60">Buyer Name:</span>
+                    <p className="font-medium">{selectedArchive.buyerName || '-'}</p>
+                  </div>
+                  <div>
+                    <span className="text-white/60">Stone Owner:</span>
+                    <p className="font-medium">{selectedArchive.stoneOwner === "me" ? "My Stone" : "Borrowed"}</p>
+                  </div>
+                  <div>
+                    <span className="text-white/60">Owner Name:</span>
+                    <p className="font-medium">{selectedArchive.ownerName || '-'}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 backdrop-blur-sm bg-white/5 rounded-lg border border-white/10">
+                <h4 className="text-lg font-semibold text-white mb-2">Dates</h4>
+                <div className="grid grid-cols-2 gap-3 text-white/90">
+                  <div>
+                    <span className="text-white/60">Selling Date:</span>
+                    <p className="font-medium">{format(selectedArchive.sellingDate, "PPP")}</p>
+                  </div>
+                  <div>
+                    <span className="text-white/60">Payment Received / Due:</span>
+                    <p className="font-medium">{format(selectedArchive.paymentReceivingDate, "PPP")}</p>
+                  </div>
+                </div>
+              </div>
+
+              {selectedArchive.receiptImage && (
+                <div className="p-4 flex justify-center">
+                  <img src={selectedArchive.receiptImage} alt="Receipt" className="max-w-full max-h-64 object-contain rounded-lg" />
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setShowArchiveDetailModal(false)} className="border-white/20 text-white">
+                  Close
+                </Button>
               </div>
             </div>
           )}
