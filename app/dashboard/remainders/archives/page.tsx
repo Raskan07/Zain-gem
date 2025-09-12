@@ -54,15 +54,37 @@ export default function ArchivesPage() {
     const q = query(collection(db, "archives"), orderBy("archivedAt", "desc"));
     const unsub = onSnapshot(q, (snap) => {
       const items = snap.docs.map((d) => {
-        const data = d.data() as any;
+        // Strongly-typed Firestore document shape to avoid `any`
+        type ArchiveDocData = {
+          stoneName?: string;
+          stoneWeight?: number;
+          stoneCost?: number;
+          sellingPrice?: number;
+          myProfit?: number;
+          partyReceives?: number;
+          sellingDate?: any;
+          paymentReceivingDate?: any;
+          durationInDays?: number;
+          stoneOwner?: "me" | "others";
+          ownerName?: string;
+          buyerType?: "local" | "chinese";
+          buyerName?: string;
+          receiptImage?: string;
+          status?: "pending" | "paid" | "overdue";
+          createdAt?: any;
+          updatedAt?: any;
+          archivedAt?: any;
+        };
+
+        const data = d.data() as ArchiveDocData;
         return {
           id: d.id,
           ...data,
-          sellingDate: data.sellingDate?.toDate ? data.sellingDate.toDate() : new Date(data.sellingDate),
-          paymentReceivingDate: data.paymentReceivingDate?.toDate ? data.paymentReceivingDate.toDate() : new Date(data.paymentReceivingDate),
-          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(data.createdAt),
-          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(data.updatedAt),
-          archivedAt: data.archivedAt?.toDate ? data.archivedAt.toDate() : (data.archivedAt ? new Date(data.archivedAt) : undefined),
+          sellingDate: data.sellingDate?.toDate ? data.sellingDate.toDate() : new Date(String(data.sellingDate)),
+          paymentReceivingDate: data.paymentReceivingDate?.toDate ? data.paymentReceivingDate.toDate() : new Date(String(data.paymentReceivingDate)),
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : new Date(String(data.createdAt)),
+          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate() : new Date(String(data.updatedAt)),
+          archivedAt: data.archivedAt?.toDate ? data.archivedAt.toDate() : (data.archivedAt ? new Date(String(data.archivedAt)) : undefined),
         } as Remainder;
       });
       setArchives(items);
