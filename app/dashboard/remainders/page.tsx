@@ -35,6 +35,7 @@ interface Remainder {
   sellingDate: Date;
   paymentReceivingDate: Date;
   durationInDays: number;
+  archivedAt?: Date;
   stoneOwner: "me" | "others";
   ownerName?: string;
   buyerType: "local" | "chinese";
@@ -82,10 +83,10 @@ export default function RemaindersPage() {
   };
 
   // Helper function to calculate days remaining from today
-  const calculateDaysRemaining = (paymentDate: Date) => {
+  const calculateDaysRemaining = (paymentDate: Date | string) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
-    const payment = new Date(paymentDate);
+    const payment = typeof paymentDate === 'string' ? new Date(paymentDate) : new Date(paymentDate);
     payment.setHours(0, 0, 0, 0);
     return differenceInDays(payment, today);
   };
@@ -592,7 +593,7 @@ export default function RemaindersPage() {
                 <div className="text-sm text-white/80">
                   <div>Weight: {arc.stoneWeight}crt</div>
                   <div>Selling Price: LKR {arc.sellingPrice.toLocaleString()}</div>
-                  <div>Archived: {arc.paymentReceived ? "Yes" : "No"}</div>
+                  <div>Archived: {arc.archivedAt ? "Yes" : "No"}</div>
                 </div>
               </div>
             ))}
