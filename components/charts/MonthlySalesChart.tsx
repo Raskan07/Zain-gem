@@ -19,6 +19,8 @@ import { collection, getDocs, onSnapshot } from 'firebase/firestore'
 type MonthlySalesChartProps = {
   // optional initial data override (allow profit optional)
   initialData?: { month: string; sales: number; profit?: number }[]
+  // legacy/alternate prop name used in some pages
+  data?: { month: string; sales: number; profit?: number }[]
 }
 
 const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
@@ -53,9 +55,10 @@ function aggregateByMonth(items: any[]) {
   return monthNames.map((m, i) => ({ month: m, sales: salesTotals[i], profit: profitTotals[i] }))
 }
 
-export default function MonthlySalesChart({ initialData }: MonthlySalesChartProps) {
-  const [data, setData] = useState<{ month: string; sales: number; profit?: number }[] | null>(initialData || null)
-  const [loading, setLoading] = useState(!initialData)
+export default function MonthlySalesChart({ initialData, data: dataProp }: MonthlySalesChartProps) {
+  const initial = dataProp || initialData || null
+  const [data, setData] = useState<{ month: string; sales: number; profit?: number }[] | null>(initial)
+  const [loading, setLoading] = useState(initial ? false : true)
 
   useEffect(() => {
     let mounted = true
