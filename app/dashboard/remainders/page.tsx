@@ -73,6 +73,22 @@ export default function RemaindersPage() {
 
   // add archive state + handler (archives persisted to Firestore)
   const [archives, setArchives] = useState<Remainder[]>([]);
+  useEffect(() => {
+    const q = query(collection(db, "archives"), orderBy("archivedAt", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const archivesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        sellingDate: parseISO(doc.data().sellingDate.toDate().toISOString()),
+        paymentReceivingDate: parseISO(doc.data().paymentReceivingDate.toDate().toISOString()),
+        createdAt: parseISO(doc.data().createdAt.toDate().toISOString()),
+        updatedAt: parseISO(doc.data().updatedAt.toDate().toISOString()),
+        archivedAt: doc.data().archivedAt ? parseISO(doc.data().archivedAt.toDate().toISOString()) : undefined,
+      })) as Remainder[];
+      setArchives(archivesData);
+    });
+    return () => unsubscribe();
+  }, []);
   const [showArchivesModal, setShowArchivesModal] = useState(false);
   // show details for a specific archived card
   const [selectedArchive, setSelectedArchive] = useState<Remainder | null>(null);
@@ -348,7 +364,7 @@ export default function RemaindersPage() {
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <p className="text-2xl font-bold text-white">{archives.length}</p>
+              <p className="text-xl font-bold">{archives.length > 0 ? archives.length : "Loading..."}</p>
               <Button
                 variant="ghost"
                 size="sm"

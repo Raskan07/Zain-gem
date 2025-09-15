@@ -48,7 +48,9 @@ import {
   doc, 
   onSnapshot, 
   query, 
-  orderBy 
+  orderBy,
+  getDocs,
+  limit
 } from "firebase/firestore";
 import { 
   ref, 
@@ -78,6 +80,8 @@ interface Stone {
   images?: string[];
   createdAt: Date;
   updatedAt: Date;
+  customId?: string; // zero-padded display id, e.g. "001"
+  customIdNum?: number; // numeric id for ordering
 }
 
 interface NewStone {
@@ -249,6 +253,8 @@ export default function StonesPage() {
           images: data.images || [],
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate() || new Date(),
+          customId: data.customId || undefined,
+          customIdNum: data.customIdNum || undefined,
         });
       });
       setStones(stonesData);
@@ -265,13 +271,33 @@ export default function StonesPage() {
       
       // Calculate profit/loss
       const profitLoss = newStone.soldPrice > 0 ? newStone.soldPrice - totalCost : null;
-      
+      // Determine next customIdNum by fetching the highest existing one
+      let nextNum = 1;
+      try {
+        const q2 = query(stonesCollection, orderBy('customIdNum', 'desc'), limit(1));
+        const snap = await getDocs(q2);
+        if (!snap.empty) {
+          const top = snap.docs[0].data();
+          const topNum = top.customIdNum || top.customId ? Number(top.customId) : undefined;
+          if (typeof topNum === 'number' && !isNaN(topNum)) {
+            nextNum = topNum + 1;
+          }
+        }
+      } catch (err) {
+        // if anything goes wrong, fallback to 1
+        console.error('Error fetching last customIdNum:', err);
+      }
+
+      const customIdStr = String(nextNum).padStart(3, '0');
+
       await addDoc(stonesCollection, {
         ...newStone,
         totalCost,
         profitLoss,
         createdAt: new Date(),
         updatedAt: new Date(),
+        customId: customIdStr,
+        customIdNum: nextNum,
       });
       setShowAddDialog(false);
     } catch (error) {
@@ -566,7 +592,7 @@ export default function StonesPage() {
                   {filteredStones.map((stone) => (
                     <TableRow key={stone.id} className="border-white/10 hover:bg-white/5 transition-colors">
                       <TableCell className="text-white font-mono text-sm px-4 py-3">
-                        {String(stones.length - stones.findIndex(s => s.id === stone.id)).padStart(3, '0')}
+                        {stone.customId ?? String(stones.length - stones.findIndex(s => s.id === stone.id)).padStart(3, '0')}
                       </TableCell>
                       <TableCell className="text-white font-medium px-4 py-3">{stone.name}</TableCell>
                       <TableCell className="px-4 py-3">
