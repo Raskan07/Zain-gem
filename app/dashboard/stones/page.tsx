@@ -219,6 +219,81 @@ export default function StonesPage() {
     w.document.close();
   };
 
+  // Open a printable report view for a single stone (includes images)
+  const openStoneReport = (stone: Stone) => {
+    const title = `Stone Report - ${stone.customId ?? stone.id} - ${stone.name}`;
+    const imagesHtml = (stone.images || []).map(img => `
+        <div style="margin:8px">
+          <img src="${img}" style="max-width:300px; max-height:300px; object-fit:contain; border-radius:8px;" />
+        </div>
+      `).join('');
+
+    const html = `<!doctype html>
+      <html>
+      <head>
+        <meta charset='utf-8'/>
+        <meta name='viewport' content='width=device-width, initial-scale=1'/>
+        <title>${title}</title>
+        <style>
+          body{font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; padding:24px; color:#111}
+          h1{font-size:22px; margin:0 0 12px}
+          .meta{margin-bottom:12px}
+          .grid{display:flex;gap:16px;flex-wrap:wrap}
+          .col{flex:1;min-width:220px}
+          table{border-collapse:collapse;width:100%;font-size:14px}
+          th,td{border:1px solid #ddd;padding:8px;text-align:left}
+          th{background:#f6f6f6}
+          .images{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+        </style>
+      </head>
+      <body>
+        <h1>${title}</h1>
+        <div class="meta">
+          <strong>Stone:</strong> ${stone.name} <br />
+          <strong>ID:</strong> ${stone.customId ?? stone.id} <br />
+          <strong>Status:</strong> ${stone.status} <br />
+          <strong>Created:</strong> ${stone.createdAt.toLocaleDateString()}
+        </div>
+
+        <div class="grid">
+          <div class="col">
+            <table>
+              <tr><th>Field</th><th>Value</th></tr>
+              <tr><td>Weight (Rough)</td><td>${stone.weightInRough} ct</td></tr>
+              <tr><td>Weight</td><td>${stone.weight} ct</td></tr>
+              <tr><td>Stone Cost</td><td>LKR ${stone.stoneCost.toLocaleString()}</td></tr>
+              <tr><td>Cutting Cost</td><td>LKR ${stone.cuttingCost.toLocaleString()}</td></tr>
+              <tr><td>Polish Cost</td><td>LKR ${stone.polishCost.toLocaleString()}</td></tr>
+              <tr><td>Treatment Cost</td><td>LKR ${stone.treatmentCost.toLocaleString()}</td></tr>
+              <tr><td>Other Cost</td><td>LKR ${stone.otherCost.toLocaleString()}</td></tr>
+              <tr><td>Total Cost</td><td>LKR ${stone.totalCost.toLocaleString()}</td></tr>
+              <tr><td>Price to Sell</td><td>LKR ${stone.priceToSell.toLocaleString()}</td></tr>
+              <tr><td>Sold Price</td><td>${stone.soldPrice > 0 ? 'LKR ' + stone.soldPrice.toLocaleString() : '-'}</td></tr>
+              <tr><td>Treatment</td><td>${stone.treatment}</td></tr>
+              <tr><td>Profit/Loss</td><td>${stone.profitLoss !== null ? (stone.profitLoss >=0 ? '+' : '') + 'LKR ' + stone.profitLoss.toLocaleString() : '-'}</td></tr>
+            </table>
+          </div>
+          <div class="col">
+            <div><strong>Images</strong></div>
+            <div class="images">
+              ${imagesHtml || '<div style="color:#666">No images available</div>'}
+            </div>
+          </div>
+        </div>
+
+        <div style="margin-top:20px; text-align:right">
+          <button onclick="window.print()" style="padding:8px 12px;border-radius:6px;background:#2563eb;color:white;border:none;cursor:pointer">Print / Save as PDF</button>
+        </div>
+      </body>
+      </html>`;
+
+    const w = window.open('', '_blank');
+    if (!w) return;
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+  };
+
   const handleExport = (range: "all" | "day" | "week" | "month") => {
     const rows = getRange(range);
     const titleMap = { all: 'All Stones', day: 'Today', week: 'This Week', month: 'This Month' } as const;
@@ -652,6 +727,14 @@ export default function StonesPage() {
                             className="text-white hover:bg-white/10"
                           >
                             <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openStoneReport(stone)}
+                            className="text-white hover:bg-white/10"
+                          >
+                            <Download className="h-3 w-3" />
                           </Button>
                           <Button
                             variant="ghost"

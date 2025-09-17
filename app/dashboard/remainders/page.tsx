@@ -16,7 +16,7 @@ import { CalendarIcon, Plus, Edit, Trash2, Eye, Upload, X } from "lucide-react";
 import { format, differenceInDays, parseISO, isAfter, isBefore } from "date-fns";
 import { cn } from "@/lib/utils";
 import { db, storage } from "@/lib/firebase";
-import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from "firebase/firestore";
+import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDoc, getDocs, where, limit } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 // If the file exists at the correct path, ensure it is named 'customCard.tsx' and exports 'CustomCard'.
 // If the file is named differently or located elsewhere, update the import path accordingly.
@@ -723,6 +723,10 @@ function AddRemainderForm({ onSubmit, onCancel }: {
     buyerType: "local",
     buyerName: "",
   });
+  // Stone ID autofill states
+  const [stoneIdInput, setStoneIdInput] = useState<string>("");
+  const [stoneLoading, setStoneLoading] = useState(false);
+  const [stoneFetchError, setStoneFetchError] = useState<string | null>(null);
   const [receiptImage, setReceiptImage] = useState<string>("");
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
   
@@ -789,6 +793,91 @@ function AddRemainderForm({ onSubmit, onCancel }: {
               required
             />
           </div>
+
+          {/* My Stone ID - visible when stoneOwner is 'me' */}
+          {formData.stoneOwner === 'me' && (
+            <div className="space-y-2">
+              <Label htmlFor="stoneId" className="text-white text-sm font-medium">My Stone ID (optional)</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="stoneId"
+                  value={stoneIdInput}
+                  onChange={(e) => setStoneIdInput(e.target.value)}
+                  placeholder="Enter stone doc ID or custom ID"
+                  className="bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                />
+                <Button
+                  type="button"
+                  onClick={async () => {
+                    // fetch stone by id or custom id
+                    if (!stoneIdInput) return;
+                    setStoneLoading(true);
+                    setStoneFetchError(null);
+                    try {
+                      // Try getDoc by document id first
+                      const docRef = doc(db, 'stones', stoneIdInput);
+                      const snap = await getDoc(docRef);
+                      if (snap.exists()) {
+                        const data: any = snap.data();
+                        setFormData({
+                          ...formData,
+                          stoneName: data.name || data.stoneName || formData.stoneName,
+                          stoneWeight: data.weight || data.weightInRough || formData.stoneWeight,
+                          stoneCost: data.stoneCost || data.purchasePrice || formData.stoneCost,
+                        });
+                        setStoneLoading(false);
+                        return;
+                      }
+
+                      // fallback: query by customId or customIdNum
+                      const q1 = query(collection(db, 'stones'), where('customId', '==', stoneIdInput), limit(1));
+                      const res1 = await getDocs(q1);
+                      if (!res1.empty) {
+                        const data = res1.docs[0].data() as any;
+                        setFormData({
+                          ...formData,
+                          stoneName: data.name || data.stoneName || formData.stoneName,
+                          stoneWeight: data.weight || data.weightInRough || formData.stoneWeight,
+                          stoneCost: data.stoneCost || data.purchasePrice || formData.stoneCost,
+                        });
+                        setStoneLoading(false);
+                        return;
+                      }
+
+                      // try numeric customIdNum
+                      const num = Number(stoneIdInput);
+                      if (!Number.isNaN(num)) {
+                        const q2 = query(collection(db, 'stones'), where('customIdNum', '==', num), limit(1));
+                        const res2 = await getDocs(q2);
+                        if (!res2.empty) {
+                          const data = res2.docs[0].data() as any;
+                          setFormData({
+                            ...formData,
+                            stoneName: data.name || data.stoneName || formData.stoneName,
+                            stoneWeight: data.weight || data.weightInRough || formData.stoneWeight,
+                            stoneCost: data.stoneCost || data.purchasePrice || formData.stoneCost,
+                          });
+                          setStoneLoading(false);
+                          return;
+                        }
+                      }
+
+                      setStoneFetchError('Stone not found for provided ID');
+                    } catch (err) {
+                      console.error('Error fetching stone:', err);
+                      setStoneFetchError('Failed to fetch stone');
+                    } finally {
+                      setStoneLoading(false);
+                    }
+                  }}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {stoneLoading ? 'Loading...' : 'Load'}
+                </Button>
+              </div>
+              {stoneFetchError && <p className="text-sm text-red-400 mt-1">{stoneFetchError}</p>}
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="stoneWeight" className="text-white text-sm font-medium">Weight (crt)</Label>
@@ -1081,6 +1170,10 @@ function EditRemainderForm({
   });
   const [receiptImage, setReceiptImage] = useState<string>(remainder.receiptImage || "");
   const [uploadingReceipt, setUploadingReceipt] = useState(false);
+  // Edit form stone autofill states
+  const [editStoneIdInput, setEditStoneIdInput] = useState<string>("");
+  const [editStoneLoading, setEditStoneLoading] = useState(false);
+  const [editStoneFetchError, setEditStoneFetchError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1129,7 +1222,7 @@ function EditRemainderForm({
               id="edit-stoneName"
               value={formData.stoneName}
               onChange={(e) => setFormData({ ...formData, stoneName: e.target.value })}
-              className="bg-white/10 border-white/20 text-white"
+              className={"bg-white/10 border-white/20 text-white " + (editStoneLoading ? 'animate-pulse opacity-80' : '')}
               required
             />
           </div>
@@ -1206,6 +1299,86 @@ function EditRemainderForm({
           
           <div>
             <Label className="text-white">Selling Date</Label>
+            {/* Edit form: My Stone ID loader when owner is 'me' */}
+            {remainder.stoneOwner === 'me' && (
+              <div className="mt-3">
+                <Label htmlFor="edit-stoneId" className="text-white text-sm">My Stone ID (optional)</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <Input
+                    id="edit-stoneId"
+                    value={editStoneIdInput}
+                    onChange={(e) => setEditStoneIdInput(e.target.value)}
+                    placeholder="Enter stone doc ID or custom ID"
+                    className="bg-white/10 border-white/20 text-white"
+                  />
+                  <Button
+                    type="button"
+                    onClick={async () => {
+                      if (!editStoneIdInput) return;
+                      setEditStoneLoading(true);
+                      setEditStoneFetchError(null);
+                      try {
+                        const docRef = doc(db, 'stones', editStoneIdInput);
+                        const snap = await getDoc(docRef);
+                        if (snap.exists()) {
+                          const data: any = snap.data();
+                          setFormData({
+                            ...formData,
+                            stoneName: data.name || data.stoneName || formData.stoneName,
+                            stoneWeight: data.weight || data.weightInRough || formData.stoneWeight,
+                            stoneCost: data.stoneCost || data.purchasePrice || formData.stoneCost,
+                          });
+                          setEditStoneLoading(false);
+                          return;
+                        }
+
+                        const q1 = query(collection(db, 'stones'), where('customId', '==', editStoneIdInput), limit(1));
+                        const res1 = await getDocs(q1);
+                        if (!res1.empty) {
+                          const data = res1.docs[0].data() as any;
+                          setFormData({
+                            ...formData,
+                            stoneName: data.name || data.stoneName || formData.stoneName,
+                            stoneWeight: data.weight || data.weightInRough || formData.stoneWeight,
+                            stoneCost: data.stoneCost || data.purchasePrice || formData.stoneCost,
+                          });
+                          setEditStoneLoading(false);
+                          return;
+                        }
+
+                        const num = Number(editStoneIdInput);
+                        if (!Number.isNaN(num)) {
+                          const q2 = query(collection(db, 'stones'), where('customIdNum', '==', num), limit(1));
+                          const res2 = await getDocs(q2);
+                          if (!res2.empty) {
+                            const data = res2.docs[0].data() as any;
+                            setFormData({
+                              ...formData,
+                              stoneName: data.name || data.stoneName || formData.stoneName,
+                              stoneWeight: data.weight || data.weightInRough || formData.stoneWeight,
+                              stoneCost: data.stoneCost || data.purchasePrice || formData.stoneCost,
+                            });
+                            setEditStoneLoading(false);
+                            return;
+                          }
+                        }
+
+                        setEditStoneFetchError('Stone not found for provided ID');
+                      } catch (err) {
+                        console.error('Error fetching stone:', err);
+                        setEditStoneFetchError('Failed to fetch stone');
+                      } finally {
+                        setEditStoneLoading(false);
+                      }
+                    }}
+                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                  >
+                    {editStoneLoading ? 'Loading...' : 'Load'}
+                  </Button>
+                </div>
+                {editStoneFetchError && <p className="text-sm text-red-400 mt-1">{editStoneFetchError}</p>}
+              </div>
+            )}
             <Popover>
               <PopoverTrigger asChild>
                 <Button

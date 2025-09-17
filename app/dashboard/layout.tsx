@@ -37,7 +37,7 @@ export default function DashboardLayout({
   const menuItems = [
     { icon: Home, label: "HOME", href: "/dashboard", active: pathname === "/dashboard" },
     { icon: Gem, label: "STONES", href: "/dashboard/stones", active: pathname === "/dashboard/stones" },
-    { icon: ShoppingCart, label: "SALES", href: "/dashboard/sales", active: pathname === "/dashboard/sales" },
+    { icon: ShoppingCart, label: "SALES & ANALYTICS", href: "/dashboard/sales", active: pathname === "/dashboard/sales" },
     { icon: Bell, label: "REMAINDERS", href: "/dashboard/remainders", active: pathname === "/dashboard/remainders" },
     { icon: BarChart3, label: "REPORTS", href: "/dashboard/reports", active: pathname === "/dashboard/reports" },
     { icon: Settings, label: "SALES", href: "/dashboard/settings", active: pathname === "/dashboard/settings" },
