@@ -263,20 +263,7 @@ export default function SalesPage() {
         <CardContent>
           <div className="h-64 bg-white/5 rounded-lg p-2">
             {/* Monthly sales chart using ChartContainer */}
-            <MonthlySalesChart data={[
-              { month: 'Jan', sales: 8200 },
-              { month: 'Feb', sales: 9400 },
-              { month: 'Mar', sales: 7600 },
-              { month: 'Apr', sales: 10400 },
-              { month: 'May', sales: 9800 },
-              { month: 'Jun', sales: 11200 },
-              { month: 'Jul', sales: 12500 },
-              { month: 'Aug', sales: 9400 },
-              { month: 'Sep', sales: 10800 },
-              { month: 'Oct', sales: 9800 },
-              { month: 'Nov', sales: 11600 }, 
-              { month: 'Dec', sales: 13800 },
-            ]} />
+            <MonthlySalesChart data={[]} />
           </div>
         </CardContent>
       </Card>

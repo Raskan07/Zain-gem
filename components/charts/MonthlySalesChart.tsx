@@ -4,8 +4,8 @@ import React from 'react'
 import { ChartContainer } from '@/components/ui/chart'
 import {
   ResponsiveContainer,
-  AreaChart,
-  Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   Tooltip,
@@ -30,29 +30,42 @@ function toNumber(v: any) {
   return Number.isFinite(n) ? n : 0
 }
 
-function aggregateByMonth(items: any[]) {
+/**
+ * Combine three sources into monthly buckets:
+ * - salesTotals: sum of sellingPrice grouped by sellingDate from remainders+archives
+ * - profitTotals: sum of myProfit grouped by sellingDate from remainders+archives
+ * - investTotals: sum of stone cost grouped by a stone date (createdAt / purchasedAt / addedAt)
+ */
+function aggregateMonthly(remItems: any[], arcItems: any[], stoneItems: any[]) {
   const salesTotals = new Array(12).fill(0)
   const profitTotals = new Array(12).fill(0)
+  const investTotals = new Array(12).fill(0)
 
-  items.forEach((it) => {
-    // try common date fields
-    const dateStr = it.date || it.sellingDate || it.paymentReceivingDate || it.createdAt
-    const d = dateStr ? new Date(dateStr?.toDate ? dateStr.toDate() : String(dateStr)) : null
-    if (d instanceof Date && !isNaN(d.getTime())) {
-      const m = d.getMonth()
-      const amount = toNumber(it.amount ?? it.sellingPrice ?? it.total ?? 0)
-      // profit may be explicit or derivable from sellingPrice - stoneCost
-      let profit = 0
-      if (it.myProfit !== undefined) profit = toNumber(it.myProfit)
-      else if (it.sellingPrice !== undefined && it.stoneCost !== undefined) profit = toNumber(it.sellingPrice) - toNumber(it.stoneCost)
-      else profit = toNumber(it.profit ?? 0)
+  const pushSale = (doc: any) => {
+    const sd = doc.sellingDate
+    if (!sd) return
+    const d = sd?.toDate ? sd.toDate() : new Date(String(sd))
+    if (!(d instanceof Date) || isNaN(d.getTime())) return
+    const m = d.getMonth()
+    salesTotals[m] += toNumber(doc.sellingPrice ?? doc.amount ?? 0)
+    profitTotals[m] += toNumber(doc.myProfit ?? 0)
+  }
 
-      salesTotals[m] += amount
-      profitTotals[m] += profit
-    }
+  remItems.forEach(pushSale)
+  arcItems.forEach(pushSale)
+
+  // stones: attempt to find a suitable date field and compute cost
+  stoneItems.forEach((s) => {
+    const dateField = s.purchaseDate || s.createdAt || s.addedAt || s.addedOn
+    if (!dateField) return
+    const d = dateField?.toDate ? dateField.toDate() : new Date(String(dateField))
+    if (!(d instanceof Date) || isNaN(d.getTime())) return
+    const m = d.getMonth()
+    const totalCost = toNumber(s.totalCost) || (toNumber(s.stoneCost) + toNumber(s.cuttingCost) + toNumber(s.polishCost) + toNumber(s.treatmentCost) + toNumber(s.otherCost))
+    investTotals[m] += totalCost
   })
 
-  return monthNames.map((m, i) => ({ month: m, sales: salesTotals[i], profit: profitTotals[i] }))
+  return monthNames.map((m, i) => ({ month: m, sales: salesTotals[i], profit: profitTotals[i], investment: investTotals[i] }))
 }
 
 export default function MonthlySalesChart({ initialData, data: dataProp }: MonthlySalesChartProps) {
@@ -64,45 +77,66 @@ export default function MonthlySalesChart({ initialData, data: dataProp }: Month
     let mounted = true
     setLoading(true)
 
-    const candidates = ['sales', 'archives', 'remainders']
-  
-    // We'll read from the `remainders` collection where sellingPrice is stored
-    const colRef = collection(db, 'remainders')
+    const remRef = collection(db, 'remainders')
+    const arcRef = collection(db, 'archives')
+    const stonesRef = collection(db, 'stones')
 
-    // attach realtime listener for remainders
-    let unsub: (() => void) | undefined
+    let remUnsub: (() => void) | undefined
+    let arcUnsub: (() => void) | undefined
+    let stonesUnsub: (() => void) | undefined
 
-    async function attach() {
+    const computeAndSet = (remSnapDocs: any[], arcSnapDocs: any[], stoneSnapDocs: any[]) => {
+      if (!mounted) return
+      const remItems = remSnapDocs.map((d: any) => ({ id: d.id, ...d.data() }))
+      const arcItems = arcSnapDocs.map((d: any) => ({ id: d.id, ...d.data() }))
+      const stoneItems = stoneSnapDocs.map((d: any) => ({ id: d.id, ...d.data() }))
+      const agg = aggregateMonthly(remItems, arcItems, stoneItems)
+      setData(agg)
+      setLoading(false)
+    }
+
+    // local caches of docs
+    let remCache: any[] = []
+    let arcCache: any[] = []
+    let stonesCache: any[] = []
+
+    remUnsub = onSnapshot(remRef, (s) => {
+      remCache = s.docs
+      computeAndSet(remCache, arcCache, stonesCache)
+    }, (err) => console.error('reminders snapshot error', err))
+
+    arcUnsub = onSnapshot(arcRef, (s) => {
+      arcCache = s.docs
+      computeAndSet(remCache, arcCache, stonesCache)
+    }, (err) => console.error('archives snapshot error', err))
+
+    stonesUnsub = onSnapshot(stonesRef, (s) => {
+      stonesCache = s.docs
+      computeAndSet(remCache, arcCache, stonesCache)
+    }, (err) => console.error('stones snapshot error', err))
+
+  // initial fetch fallback: getDocs for each and compute quickly
+  ;(async () => {
       try {
-        const snap = await getDocs(colRef)
+        const [rSnap, aSnap, sSnap] = await Promise.all([getDocs(remRef), getDocs(arcRef), getDocs(stonesRef)])
         if (!mounted) return
-        // Attach listener even if empty so we get live updates
-        unsub = onSnapshot(colRef, (s) => {
-          if (!mounted) return
-          const items = s.docs.map((d) => ({ id: d.id, ...d.data() }))
-          setData(aggregateByMonth(items))
-          setLoading(false)
-        })
-        // If initial snapshot was not empty, seed immediately
-        if (!snap.empty) {
-          const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }))
-          setData(aggregateByMonth(items))
-          setLoading(false)
-        }
+        remCache = rSnap.docs
+        arcCache = aSnap.docs
+        stonesCache = sSnap.docs
+        computeAndSet(remCache, arcCache, stonesCache)
       } catch (err) {
-        // fallback: show zeros
         if (mounted) {
-          setData(monthNames.map((m) => ({ month: m, sales: 0, profit: 0 })))
+          setData(monthNames.map((m) => ({ month: m, sales: 0, profit: 0, investment: 0 })))
           setLoading(false)
         }
       }
-    }
-
-    attach()
+    })()
 
     return () => {
       mounted = false
-      if (unsub) unsub()
+      if (remUnsub) remUnsub()
+      if (arcUnsub) arcUnsub()
+      if (stonesUnsub) stonesUnsub()
     }
   }, [])
 
@@ -123,18 +157,19 @@ export default function MonthlySalesChart({ initialData, data: dataProp }: Month
     <ChartContainer
       id="monthly-sales"
       className="w-full h-full"
-      config={{ sales: { label: 'Sales', color: '#34D399' }, profit: { label: 'Profit', color: '#F472B6' } }}
+      config={{ sales: { label: 'Sales', color: '#34D399' }, profit: { label: 'Profit', color: '#F472B6' }, investment: { label: 'Investment', color: '#60A5FA' } }}
     >
       <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 8, right: 12, left: 8, bottom: 8 }}>
+        <BarChart data={data} margin={{ top: 8, right: 12, left: 8, bottom: 8 }}>
           <CartesianGrid stroke="rgba(255,255,255,0.06)" />
           <XAxis dataKey="month" tick={{ fill: 'rgba(255,255,255,0.7)' }} />
           <YAxis tick={{ fill: 'rgba(255,255,255,0.7)' }} />
           <Tooltip formatter={(value: any) => (typeof value === 'number' ? value.toLocaleString() : value)} />
           <Legend formatter={(value) => <span className="text-sm text-gray-300">{value}</span>} />
-          <Area type="monotone" dataKey="sales" stroke="#34D399" fill="#34D39922" />
-          <Area type="monotone" dataKey="profit" stroke="#F472B6" fill="#F472B622" />
-        </AreaChart>
+          <Bar dataKey="sales" name="Sales" fill="#34D399" />
+          <Bar dataKey="profit" name="Profit/Loss" fill="#F472B6" />
+          <Bar dataKey="investment" name="Investment" fill="#60A5FA" />
+        </BarChart>
       </ResponsiveContainer>
     </ChartContainer>
   )
