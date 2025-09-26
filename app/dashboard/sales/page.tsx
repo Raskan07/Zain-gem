@@ -7,6 +7,8 @@ import MonthlySalesChart from '@/components/charts/MonthlySalesChart';
 import { useEffect, useState } from 'react';
 import { db } from '@/lib/firebase';
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
+import MonthlyAnalytics from "@/components/analytics/MonthlyAnalytics";
+
 
 export default function SalesPage() {
  
@@ -268,7 +270,9 @@ export default function SalesPage() {
         </CardContent>
       </Card>
 
-      {/* Sales Table */}
+      {/* Monthly Analytics */}
+
+      <MonthlyAnalytics />
       
     </div>
   );
