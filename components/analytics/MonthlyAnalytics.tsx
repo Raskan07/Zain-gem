@@ -149,9 +149,16 @@ export default function MonthlyAnalytics() {
       }
       const soldDate = parseDateField(sdDoc.sellingDate)
       if (boughtDate && soldDate) {
-        const diffDays = Math.max(0, Math.round((soldDate.getTime() - boughtDate.getTime()) / (1000*60*60*24)))
-        durations.push(diffDays)
-        fastMoving.push({ ...sdDoc, boughtDate, soldDate, days: diffDays })
+        // prefer explicit duration if provided in the sale doc
+        const explicit = toNumber(sdDoc.durationInDays ?? sdDoc.duration)
+        if (explicit && explicit > 0) {
+          durations.push(explicit)
+          fastMoving.push({ ...sdDoc, boughtDate, soldDate, days: explicit })
+        } else {
+          const diffDays = Math.max(0, Math.round((soldDate.getTime() - boughtDate.getTime()) / (1000*60*60*24)))
+          durations.push(diffDays)
+          fastMoving.push({ ...sdDoc, boughtDate, soldDate, days: diffDays })
+        }
       }
     })
 
@@ -224,6 +231,16 @@ export default function MonthlyAnalytics() {
     if (pr && pr !== 0) return `LKR ${pr.toLocaleString()}`
     if (sc && sc !== 0) return `LKR ${sc.toLocaleString()}`
     return '—'
+  }
+
+  function getPaymentBadge(doc: any) {
+    // possible fields: paymentStatus, status, isPaid, paid, payment?.status
+    const status = (doc.paymentStatus ?? doc.status ?? (doc.payment && doc.payment.status) ?? (doc.isPaid ? 'paid' : undefined) ?? (doc.paid ? 'paid' : undefined))
+    const s = String(status ?? '').toLowerCase()
+    if (s === 'paid' || s === 'complete' || s === 'completed') return <Badge className="bg-green-600 text-white">Paid</Badge>
+    if (s === 'overdue') return <Badge className="bg-red-600 text-white">Overdue</Badge>
+    if (s === 'pending' || s === '') return <Badge className="bg-yellow-500 text-black">Pending</Badge>
+    return <Badge className="bg-gray-600 text-white">{String(status)}</Badge>
   }
 
   const selectedAgg = useMemo(() => aggregateFor(selectedMonth, selectedYear), [selectedMonth, selectedYear, salesItems, stonesDocs])
@@ -316,6 +333,7 @@ export default function MonthlyAnalytics() {
                 <TableHead className="text-white px-4 py-3">Name</TableHead>
                 <TableHead className="text-white px-4 py-3">Weight (ct)</TableHead>
                 <TableHead className="text-white px-4 py-3">Stone Cost / Party Receives</TableHead>
+                <TableHead className="text-white px-4 py-3">Selling Price</TableHead>
                 <TableHead className="text-white px-4 py-3">Selling Date</TableHead>
                 <TableHead className="text-white px-4 py-3">Duration (days)</TableHead>
                 <TableHead className="text-white px-4 py-3">Stone Ownership</TableHead>
@@ -331,21 +349,26 @@ export default function MonthlyAnalytics() {
                 const partyReceives = (s.partyReceives ?? s.partyAmount ?? s.party) ?? s.stoneCost ?? null
                 const sellingDate = parseDateField(s.sellingDate) || null
 
-                // compute duration: try to find matching stone purchase date, fallback to createdAt on sale doc
+                // compute duration: prefer durationInDays from the sale doc, otherwise try to compute
                 let daysHeld: number | null = null
-                try {
-                  const stoneId = s.stoneId || s.stoneRef || s.stone
-                  let boughtDate: Date | null = null
-                  if (stoneId) {
-                    const found = stonesDocs.find((st: any) => (st.id === stoneId) || (st.customId === stoneId) || (String(st.customIdNum) === String(stoneId)))
-                    if (found) boughtDate = parseDateField(found.purchaseDate || found.createdAt || found.addedAt || found.addedOn)
+                const explicitDays = toNumber(s.durationInDays ?? s.duration)
+                if (explicitDays && explicitDays > 0) {
+                  daysHeld = explicitDays
+                } else {
+                  try {
+                    const stoneId = s.stoneId || s.stoneRef || s.stone
+                    let boughtDate: Date | null = null
+                    if (stoneId) {
+                      const found = stonesDocs.find((st: any) => (st.id === stoneId) || (st.customId === stoneId) || (String(st.customIdNum) === String(stoneId)))
+                      if (found) boughtDate = parseDateField(found.purchaseDate || found.createdAt || found.addedAt || found.addedOn)
+                    }
+                    if (!boughtDate) boughtDate = parseDateField(s.createdAt) || parseDateField(s.addedAt) || null
+                    if (boughtDate && sellingDate) {
+                      daysHeld = Math.max(0, Math.round((sellingDate.getTime() - boughtDate.getTime()) / (1000*60*60*24)))
+                    }
+                  } catch (err) {
+                    daysHeld = null
                   }
-                  if (!boughtDate) boughtDate = parseDateField(s.createdAt) || parseDateField(s.addedAt) || null
-                  if (boughtDate && sellingDate) {
-                    daysHeld = Math.max(0, Math.round((sellingDate.getTime() - boughtDate.getTime()) / (1000*60*60*24)))
-                  }
-                } catch (err) {
-                  daysHeld = null
                 }
 
                 const ownership = s.ownership || s.stoneOwner || s.owner || s.partyName || (s.isBorrowed ? 'Borrowed' : 'Mine') || 'Unknown'
@@ -356,15 +379,19 @@ export default function MonthlyAnalytics() {
                     <TableCell className="text-white px-4 py-3">{name}</TableCell>
                     <TableCell className="text-white px-4 py-3">{weight} ct</TableCell>
                     <TableCell className="text-white px-4 py-3">{formatPartyOrStone(s)}</TableCell>
+                    <TableCell className="text-white px-4 py-3">LKR {toNumber(s.sellingPrice).toLocaleString()}</TableCell>
                     <TableCell className="text-white px-4 py-3">{sellingDate ? sellingDate.toLocaleDateString() : '—'}</TableCell>
                     <TableCell className="text-white px-4 py-3">{daysHeld != null ? daysHeld : '—'}</TableCell>
                     <TableCell className="text-white px-4 py-3">{ownership}</TableCell>
                     <TableCell className="text-white px-4 py-3">{getProfitLossDisplay(profit)}</TableCell>
                     <TableCell className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => setEditingStone(s)} className="text-white hover:bg-white/10"><Edit className="h-3 w-3"/></Button>
-                        <Button variant="ghost" size="sm" onClick={() => openStoneReport(s)} className="text-white hover:bg-white/10"><Download className="h-3 w-3"/></Button>
-                        <Button variant="ghost" size="sm" onClick={() => handleDeleteStone(s.id)} className="text-white hover:bg-white/10"><Trash2 className="h-3 w-3"/></Button>
+                      <div className="flex items-center gap-2 justify-between">
+                        <div className="flex items-center gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => setEditingStone(s)} className="text-white hover:bg-white/10"><Edit className="h-3 w-3"/></Button>
+                          <Button variant="ghost" size="sm" onClick={() => openStoneReport(s)} className="text-white hover:bg-white/10"><Download className="h-3 w-3"/></Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDeleteStone(s.id)} className="text-white hover:bg-white/10"><Trash2 className="h-3 w-3"/></Button>
+                        </div>
+                        <div className="ml-2">{getPaymentBadge(s)}</div>
                       </div>
                     </TableCell>
                   </TableRow>
