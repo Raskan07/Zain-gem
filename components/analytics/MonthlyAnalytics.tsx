@@ -22,7 +22,9 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table'
-import { Calendar, DollarSign, TrendingUp, Layers } from 'lucide-react'
+import { Calendar, DollarSign, TrendingUp, Layers, Edit, Download, Trash2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 
 type DocAny = { [k: string]: any }
 
@@ -59,6 +61,8 @@ export default function MonthlyAnalytics() {
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth())
   const [comparePrev, setComparePrev] = useState(true)
   const [monthPickerOpen, setMonthPickerOpen] = useState(false)
+  const [imageModalSrc, setImageModalSrc] = useState<string | null>(null)
+  const [editingStone, setEditingStone] = useState<DocAny | null>(null)
 
   // build list of month options (last 36 months)
   const monthOptions = useMemo(() => {
@@ -165,6 +169,63 @@ export default function MonthlyAnalytics() {
     }
   }
 
+  // helper UI actions
+  function openImageModal(src: string) {
+    setImageModalSrc(src)
+  }
+  function closeImageModal() {
+    setImageModalSrc(null)
+  }
+
+  function getStatusBadge(status: string | undefined) {
+    const s = (status || 'unknown').toString().toLowerCase()
+    if (s === 'sold') return <Badge className="bg-green-600 text-white">Sold</Badge>
+    if (s === 'available') return <Badge className="bg-blue-600 text-white">Available</Badge>
+    if (s === 'reserved') return <Badge className="bg-yellow-600 text-black">Reserved</Badge>
+    return <Badge className="bg-gray-600 text-white">{String(status ?? 'N/A')}</Badge>
+  }
+
+  function getProfitLossDisplay(v: any) {
+    const n = toNumber(v)
+    const fmt = `LKR ${Math.abs(n).toLocaleString()}`
+    if (n > 0) return <span className="text-green-300">+{fmt}</span>
+    if (n < 0) return <span className="text-red-300">-{fmt}</span>
+    return <span className="text-gray-200">{fmt}</span>
+  }
+
+  function openStoneReport(stone: DocAny) {
+    try {
+      const data = JSON.stringify(stone, null, 2)
+      const blob = new Blob([data], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `stone-${stone.id || stone.customId || 'report'}.json`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Failed to create report', err)
+    }
+  }
+
+  function handleDeleteStone(id: string) {
+    if (!confirm('Delete this stone from the client view? This will only remove it locally in the UI.')) return
+    // soft-remove from local state to avoid accidental destructive operations
+    setStonesDocs(prev => prev.filter(s => s.id !== id))
+    // optionally: call Firestore delete with proper confirmation in a separate flow
+    console.log('Stone removed locally:', id)
+  }
+
+  function formatPartyOrStone(sale: any) {
+    const pr = toNumber(sale.partyReceives ?? sale.partyAmount ?? sale.party)
+    const sc = toNumber(sale.stoneCost)
+    if (pr && pr !== 0) return `LKR ${pr.toLocaleString()}`
+    if (sc && sc !== 0) return `LKR ${sc.toLocaleString()}`
+    return '—'
+  }
+
   const selectedAgg = useMemo(() => aggregateFor(selectedMonth, selectedYear), [selectedMonth, selectedYear, salesItems, stonesDocs])
   const prevDate = useMemo(() => {
     const d = new Date(selectedYear, selectedMonth, 1)
@@ -246,27 +307,69 @@ export default function MonthlyAnalytics() {
         </CardContainer>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="flex-col  flex  gap-6">
         <div>
           <h3 className="text-lg font-semibold text-white mb-2">Stones Sold ({selectedAgg.stonesSold.length})</h3>
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Sold Price</TableHead>
-                <TableHead>Profit</TableHead>
-                <TableHead>Selling Date</TableHead>
+              <TableRow className="backdrop-blur-sm bg-white/10">
+                <TableHead className="text-white px-4 py-3">Name</TableHead>
+                <TableHead className="text-white px-4 py-3">Weight (ct)</TableHead>
+                <TableHead className="text-white px-4 py-3">Stone Cost / Party Receives</TableHead>
+                <TableHead className="text-white px-4 py-3">Selling Date</TableHead>
+                <TableHead className="text-white px-4 py-3">Duration (days)</TableHead>
+                <TableHead className="text-white px-4 py-3">Stone Ownership</TableHead>
+                <TableHead className="text-white px-4 py-3">My Profit / Loss</TableHead>
+                <TableHead className="text-white px-4 py-3">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {selectedAgg.stonesSold.map((s:any) => (
-                <TableRow key={s.id} className="border-t border-white/6">
-                  <TableCell className="py-2">{s.stoneName || s.name || s.title || s.id}</TableCell>
-                  <TableCell className="py-2">{toNumber(s.sellingPrice).toLocaleString()}</TableCell>
-                  <TableCell className="py-2">{toNumber(s.myProfit).toLocaleString()}</TableCell>
-                  <TableCell className="py-2">{(parseDateField(s.sellingDate) || new Date()).toLocaleDateString()}</TableCell>
-                </TableRow>
-              ))}
+              {selectedAgg.stonesSold.map((s: any) => {
+                // derive fields from sale doc (remainders/archives)
+                const name = s.stoneName || s.name || s.title || s.id
+                const weight = s.weight ?? s.weightInRough ?? s.stoneWeight ?? '—'
+                const partyReceives = (s.partyReceives ?? s.partyAmount ?? s.party) ?? s.stoneCost ?? null
+                const sellingDate = parseDateField(s.sellingDate) || null
+
+                // compute duration: try to find matching stone purchase date, fallback to createdAt on sale doc
+                let daysHeld: number | null = null
+                try {
+                  const stoneId = s.stoneId || s.stoneRef || s.stone
+                  let boughtDate: Date | null = null
+                  if (stoneId) {
+                    const found = stonesDocs.find((st: any) => (st.id === stoneId) || (st.customId === stoneId) || (String(st.customIdNum) === String(stoneId)))
+                    if (found) boughtDate = parseDateField(found.purchaseDate || found.createdAt || found.addedAt || found.addedOn)
+                  }
+                  if (!boughtDate) boughtDate = parseDateField(s.createdAt) || parseDateField(s.addedAt) || null
+                  if (boughtDate && sellingDate) {
+                    daysHeld = Math.max(0, Math.round((sellingDate.getTime() - boughtDate.getTime()) / (1000*60*60*24)))
+                  }
+                } catch (err) {
+                  daysHeld = null
+                }
+
+                const ownership = s.ownership || s.stoneOwner || s.owner || s.partyName || (s.isBorrowed ? 'Borrowed' : 'Mine') || 'Unknown'
+                const profit = s.myProfit ?? s.profitLoss ?? s.profit ?? 0
+
+                return (
+                  <TableRow key={s.id} className="border-white/10 hover:bg-white/5 transition-colors">
+                    <TableCell className="text-white px-4 py-3">{name}</TableCell>
+                    <TableCell className="text-white px-4 py-3">{weight} ct</TableCell>
+                    <TableCell className="text-white px-4 py-3">{formatPartyOrStone(s)}</TableCell>
+                    <TableCell className="text-white px-4 py-3">{sellingDate ? sellingDate.toLocaleDateString() : '—'}</TableCell>
+                    <TableCell className="text-white px-4 py-3">{daysHeld != null ? daysHeld : '—'}</TableCell>
+                    <TableCell className="text-white px-4 py-3">{ownership}</TableCell>
+                    <TableCell className="text-white px-4 py-3">{getProfitLossDisplay(profit)}</TableCell>
+                    <TableCell className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => setEditingStone(s)} className="text-white hover:bg-white/10"><Edit className="h-3 w-3"/></Button>
+                        <Button variant="ghost" size="sm" onClick={() => openStoneReport(s)} className="text-white hover:bg-white/10"><Download className="h-3 w-3"/></Button>
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteStone(s.id)} className="text-white hover:bg-white/10"><Trash2 className="h-3 w-3"/></Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
         </div>
@@ -275,32 +378,46 @@ export default function MonthlyAnalytics() {
           <h3 className="text-lg font-semibold text-white mb-2">Stones Bought ({selectedAgg.stonesBought.length})</h3>
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Cost</TableHead>
-                <TableHead>Date</TableHead>
+              <TableRow className="backdrop-blur-sm bg-white/10">
+                <TableHead className="text-white px-4 py-3">ID</TableHead>
+                <TableHead className="text-white px-4 py-3">Name</TableHead>
+                <TableHead className="text-white px-4 py-3">Images</TableHead>
+                <TableHead className="text-white px-4 py-3">Weight</TableHead>
+                <TableHead className="text-white px-4 py-3">Cost</TableHead>
+                <TableHead className="text-white px-4 py-3">Date</TableHead>
+                <TableHead className="text-white px-4 py-3">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {selectedAgg.stonesBought.map((s:any) => (
-                <TableRow key={s.id} className="border-t border-white/6">
-                  <TableCell className="py-2">{s.name || s.stoneName || s.id}</TableCell>
-                  <TableCell className="py-2">{toNumber(s.cost).toLocaleString()}</TableCell>
-                  <TableCell className="py-2">{(s.date || new Date()).toLocaleDateString()}</TableCell>
+              {selectedAgg.stonesBought.map((s: any) => (
+                <TableRow key={s.id} className="border-white/10 hover:bg-white/5 transition-colors">
+                  <TableCell className="text-white font-mono text-sm px-4 py-3">{s.customId ?? s.id}</TableCell>
+                  <TableCell className="text-white font-medium px-4 py-3">{s.name || s.stoneName || s.title}</TableCell>
+                  <TableCell className="px-4 py-3">
+                    {s.images && s.images.length > 0 ? (
+                      <div className="flex gap-1">
+                        {s.images.slice(0,3).map((img:string, idx:number) => (
+                          <img key={idx} src={img} alt={`img-${idx}`} className="w-8 h-8 object-cover rounded cursor-pointer" onClick={()=>openImageModal(img)} />
+                        ))}
+                        {s.images.length > 3 && <div className="w-8 h-8 bg-white/10 rounded flex items-center justify-center text-xs text-white/60">+{s.images.length - 3}</div>}
+                      </div>
+                    ) : <span className="text-white/40 text-sm">No images</span>}
+                  </TableCell>
+                  <TableCell className="text-white px-4 py-3">{s.weight ?? '—'} ct</TableCell>
+                  <TableCell className="text-white px-4 py-3">LKR {toNumber(s.cost).toLocaleString()}</TableCell>
+                  <TableCell className="text-white px-4 py-3">{(s.date || new Date()).toLocaleDateString()}</TableCell>
+                  <TableCell className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Button variant="ghost" size="sm" onClick={()=>setEditingStone(s)} className="text-white hover:bg-white/10"><Edit className="h-3 w-3"/></Button>
+                      <Button variant="ghost" size="sm" onClick={()=>openStoneReport(s)} className="text-white hover:bg-white/10"><Download className="h-3 w-3"/></Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
 
-          <div className="mt-4">
-            <h4 className="text-sm text-gray-300">Average holding period: <span className="text-white">{selectedAgg.avgHoldingDays} days</span></h4>
-            <h4 className="text-sm text-gray-300 mt-2">Fast moving stones:</h4>
-            <ul className="list-disc ml-5 text-sm text-gray-200 mt-1">
-              {selectedAgg.fastMoving.map((f:any) => (
-                <li key={f.id}>{f.stoneName || f.name || f.id} — {f.days} days</li>
-              ))}
-            </ul>
-          </div>
+          
         </div>
       </div>
     </div>
