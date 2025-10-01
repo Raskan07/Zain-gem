@@ -22,7 +22,7 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table'
-import { Calendar, DollarSign, TrendingUp, Layers, Edit, Download, Trash2 } from 'lucide-react'
+import { Calendar, DollarSign, TrendingUp, Layers, Edit, Download, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 
@@ -64,17 +64,10 @@ export default function MonthlyAnalytics() {
   const [imageModalSrc, setImageModalSrc] = useState<string | null>(null)
   const [editingStone, setEditingStone] = useState<DocAny | null>(null)
 
-  // build list of month options (last 36 months)
-  const monthOptions = useMemo(() => {
-    const opts: { key: string; label: string; month: number; year: number }[] = []
-    const total = 36
-    for (let i = 0; i < total; i++) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      const m = d.getMonth()
-      const y = d.getFullYear()
-      opts.push({ key: `${y}-${String(m).padStart(2, '0')}`, label: `${monthNames[m]} ${y}`, month: m, year: y })
-    }
-    return opts
+  // Track available years (current year - 3 to current year)
+  const years = useMemo(() => {
+    const currentYear = now.getFullYear()
+    return [currentYear - 3, currentYear - 2, currentYear - 1, currentYear]
   }, [now])
 
   useEffect(() => {
@@ -267,36 +260,75 @@ export default function MonthlyAnalytics() {
           <div className="flex items-center gap-2">
             <Popover open={monthPickerOpen} onOpenChange={setMonthPickerOpen}>
               <PopoverTrigger asChild>
-                <button className="flex items-center gap-2 bg-white/5 text-white p-2 rounded">
-                  <Calendar className="size-4 opacity-80" />
-                  <span>{monthNames[selectedMonth]} {selectedYear}</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button className="flex items-center gap-2 bg-white/5 text-white p-2 rounded">
+                    <Calendar className="size-4 opacity-80" />
+                    <span>{monthNames[selectedMonth]} {selectedYear}</span>
+                  </button>
+                  <button
+                    onClick={() => setMonthPickerOpen(true)}
+                    className="text-sm text-gray-300 flex items-center gap-2 px-2 py-1 rounded hover:bg-white/5"
+                    aria-haspopup="dialog"
+                    aria-expanded={monthPickerOpen}
+                  >
+                    <span>Showing:</span>
+                    <span className="font-medium">{monthNames[selectedMonth]} {selectedYear}</span>
+                  </button>
+                </div>
               </PopoverTrigger>
-              <PopoverContent className="w-64">
-                <Command>
-                  <CommandInput placeholder="Search month..." />
-                  <CommandList>
-                    {monthOptions.map((opt) => (
-                      <CommandItem
-                        key={opt.key}
-                        onSelect={() => {
-                          setSelectedMonth(opt.month)
-                          setSelectedYear(opt.year)
-                          setMonthPickerOpen(false)
-                        }}
-                      >
-                        {opt.label}
-                      </CommandItem>
-                    ))}
-                    <CommandEmpty>No months found.</CommandEmpty>
-                  </CommandList>
-                </Command>
+              <PopoverContent className="w-[280px] p-3">
+                <div className="space-y-3">
+                  {/* Year selector */}
+                  <div className="flex items-center justify-between gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={selectedYear <= Math.min(...years)}
+                      onClick={() => setSelectedYear(y => y - 1)}
+                      className="h-7 w-7 p-0"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <div className="font-semibold">{selectedYear}</div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      disabled={selectedYear >= Math.max(...years)}
+                      onClick={() => setSelectedYear(y => y + 1)}
+                      className="h-7 w-7 p-0"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  {/* Month grid */}
+                  <div className="grid grid-cols-3 gap-2">
+                    {monthNames.map((month, idx) => {
+                      const isSelected = selectedMonth === idx && selectedYear === now.getFullYear()
+                      const isCurrent = idx === now.getMonth() && selectedYear === now.getFullYear()
+
+                      return (
+                        <Button
+                          key={month}
+                          variant={isSelected ? 'default' : 'ghost'}
+                          size="sm"
+                          onClick={() => {
+                            setSelectedMonth(idx)
+                            setMonthPickerOpen(false)
+                          }}
+                          className={`h-9 ${isCurrent && !isSelected ? 'border border-primary' : ''}`}
+                        >
+                          {month}
+                        </Button>
+                      )
+                    })}
+                  </div>
+                </div>
               </PopoverContent>
             </Popover>
 
             <label className="text-sm text-gray-300 flex items-center gap-2"><input type="checkbox" checked={comparePrev} onChange={(e)=>setComparePrev(e.target.checked)} /> Compare to previous</label>
           </div>
-        <div className="text-sm text-gray-300">Showing: {monthNames[selectedMonth]} {selectedYear}</div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
