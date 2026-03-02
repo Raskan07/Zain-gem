@@ -1,124 +1,26 @@
 "use client";
 
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { AuroraBackground } from "@/components/ui/aurora-background";
-import { 
-  Home, 
-  Gem, 
-  ShoppingCart, 
-  Bell, 
-  BarChart3,
-  Settings,
-  LogOut, 
-  Menu,
-  X
-} from "lucide-react";
-import { useRouter, usePathname } from "next/navigation";
-import Link from "next/link";
+import { ReactNode } from "react";
+import { DashboardNav } from "@/components/dashboard-nav";
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  const handleLogout = () => {
-    router.push('/');
-  };
-
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
-
-  const menuItems = [
-    { icon: Home, label: "HOME", href: "/dashboard", active: pathname === "/dashboard" },
-    { icon: Gem, label: "STONES", href: "/dashboard/stones", active: pathname === "/dashboard/stones" },
-    { icon: ShoppingCart, label: "SALES & ANALYTICS", href: "/dashboard/sales", active: pathname === "/dashboard/sales" },
-    { icon: Bell, label: "REMAINDERS", href: "/dashboard/remainders", active: pathname === "/dashboard/remainders" },
-    { icon: BarChart3, label: "REPORTS", href: "/dashboard/reports", active: pathname === "/dashboard/reports" },
-    { icon: Settings, label: "SALES", href: "/dashboard/settings", active: pathname === "/dashboard/settings" },
-  ];
-
+export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
-    <AuroraBackground>
-             {/* Menu Button - Visible on all screen sizes */}
-       <Button
-         variant="outline"
-         size="icon"
-         onClick={toggleSidebar}
-         className="fixed top-4 left-4 z-50 bg-white/10 border-white/20 text-white hover:bg-white/20"
-       >
-         <Menu className="h-5 w-5" />
-       </Button>
+    <div className="dark min-h-screen bg-background selection:bg-primary selection:text-primary-foreground">
+      {/* Background Gradients */}
+      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-[-15%] right-[-10%] w-[70%] h-[70%] rounded-full bg-gradient-to-br from-primary/15 to-transparent blur-[140px]" />
+        <div className="absolute bottom-[-10%] left-[-15%] w-[60%] h-[60%] rounded-full bg-gradient-to-tr from-primary/10 to-transparent blur-[120px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.02)_0%,transparent_100%)]" />
+      </div>
 
-      {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-40 w-64 bg-transparent border-r border-white/20 transform transition-transform duration-300 ease-in-out ${
-        isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
-        {/* Sidebar Header */}
-        <div className="flex items-center justify-between p-6 border-b border-white/20">
-          <div className="flex items-center space-x-3">
-            <img src="/assets/logo.png" alt="logo" className="h-8 w-8" />
-            <h2 className="text-xl font-bold text-white">Zain Gems</h2>
+      <div className="relative z-10 flex flex-col min-h-screen">
+        <DashboardNav />
+        <main className="flex-1 px-4 md:px-8 pb-12 w-full max-w-[1600px] mx-auto">
+          <div className="bg-card backdrop-blur-xl rounded-[32px] md:rounded-[48px] border border-border shadow-[0_32px_128px_-32px_rgba(0,0,0,0.8)] overflow-hidden min-h-[90vh]">
+            {children}
           </div>
-                     <Button
-             variant="ghost"
-             size="icon"
-             onClick={toggleSidebar}
-             className="text-white hover:bg-white/20"
-           >
-             <X className="h-5 w-5" />
-           </Button>
-        </div>
-
-        {/* Navigation Menu */}
-        <nav className="p-4 space-y-2">
-          {menuItems.map((item, index) => (
-            <Link key={index} href={item.href} onClick={() => setIsSidebarOpen(false)}>
-              <Button
-                variant={item.active ? "secondary" : "ghost"}
-                className={`w-full justify-start text-left h-12 ${
-                  item.active 
-                    ? 'bg-white/20 text-white border-white/30' 
-                    : 'text-gray-300 hover:bg-white/10 hover:text-white'
-                }`}
-              >
-                <item.icon className="h-5 w-5 mr-3" />
-                {item.label}
-              </Button>
-            </Link>
-          ))}
-        </nav>
-
-        {/* Sidebar Footer */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-white/20">
-          <Button
-            variant="ghost"
-            onClick={handleLogout}
-            className="w-full justify-start text-gray-300 hover:bg-white/10 hover:text-white h-12"
-          >
-            <LogOut className="h-5 w-5 mr-3" />
-            Logout
-          </Button>
-        </div>
+        </main>
       </div>
-
-      {/* Main Content */}
-      <div className={`transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-0'}`}>
-        {children}
-      </div>
-
-      {/* Overlay for mobile */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-30 md:hidden"
-          onClick={toggleSidebar}
-        />
-      )}
-    </AuroraBackground>
+    </div>
   );
 }

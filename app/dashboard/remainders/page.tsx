@@ -17,6 +17,7 @@ import { format, differenceInDays, parseISO, isAfter, isBefore } from "date-fns"
 import { cn } from "@/lib/utils";
 import { db, storage } from "@/lib/firebase";
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, getDoc, getDocs, where, limit } from "firebase/firestore";
+import { ExportOptions } from "@/components/reports/ExportOptions";
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 // If the file exists at the correct path, ensure it is named 'customCard.tsx' and exports 'CustomCard'.
 // If the file is named differently or located elsewhere, update the import path accordingly.
@@ -70,6 +71,47 @@ export default function RemaindersPage() {
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [selectedRemainder, setSelectedRemainder] = useState<Remainder | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportCSV = async () => {
+    setIsExporting(true);
+    try {
+      const csvData = remainders.map(r => ({
+        'Stone Name': r.stoneName,
+        'Stone Weight': r.stoneWeight,
+        'Stone Cost': r.stoneCost,
+        'Selling Price': r.sellingPrice,
+        'My Profit': r.myProfit,
+        'Party Receives': r.partyReceives,
+        'Selling Date': format(r.sellingDate, 'yyyy-MM-dd'),
+        'Payment Due Date': format(r.paymentReceivingDate, 'yyyy-MM-dd'),
+        'Duration (Days)': r.durationInDays,
+        'Stone Owner': r.stoneOwner,
+        'Owner Name': r.ownerName || '-',
+        'Buyer Type': r.buyerType,
+        'Buyer Name': r.buyerName || '-',
+        'Status': r.status
+      }));
+
+      const headers = Object.keys(csvData[0]);
+      const csvContent = [
+        headers.join(','),
+        ...csvData.map(row => headers.map(header => JSON.stringify(row[header as keyof typeof row])).join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `reminders_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Failed to export CSV:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // add archive state + handler (archives persisted to Firestore)
   const [archives, setArchives] = useState<Remainder[]>([]);
@@ -275,11 +317,30 @@ export default function RemaindersPage() {
         Add Remainder
       </Button>
 
+       <ExportOptions
+          data={{
+            dateRange: { 
+              from: format(new Date(), 'yyyy-MM-dd'), 
+              to: format(new Date(), 'yyyy-MM-dd') 
+            },
+            reminders: remainders.map(r => ({
+              title: r.stoneName,
+              dueDate: r.paymentReceivingDate,
+              status: r.status,
+              category: r.buyerType,
+              assignedTo: r.ownerName || undefined
+            }))
+          }}
+          onExportCSV={handleExportCSV}
+          isLoading={isExporting}
+        />
+
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-white">Remainders System</h1>
           <p className="text-white/60">Track stone sales and payment schedules</p>
         </div>
+       
       </div>
 
       {/* Dialog moved outside the button container */}

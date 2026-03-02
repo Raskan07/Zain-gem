@@ -23,7 +23,7 @@ export const stonesCollection = collection(db, 'stones');
 // Stone types for dropdown
 export const stoneTypes = [
   'Sapphire',
-  'Spinel', 
+  'Spinel',
   'Ruby',
   'TSV',
   'Mahange',

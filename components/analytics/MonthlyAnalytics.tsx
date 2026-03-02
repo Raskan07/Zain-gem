@@ -25,6 +25,7 @@ import {
 import { Calendar, DollarSign, TrendingUp, Layers, Edit, Download, Trash2, ChevronLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import MonthlyReport from '@/components/reports/MonthlyReport'
 
 type DocAny = { [k: string]: any }
 
@@ -63,6 +64,7 @@ export default function MonthlyAnalytics() {
   const [monthPickerOpen, setMonthPickerOpen] = useState(false)
   const [imageModalSrc, setImageModalSrc] = useState<string | null>(null)
   const [editingStone, setEditingStone] = useState<DocAny | null>(null)
+  const [showReport, setShowReport] = useState(false)
 
   // Track available years (current year - 3 to current year)
   const years = useMemo(() => {
@@ -328,7 +330,34 @@ export default function MonthlyAnalytics() {
             </Popover>
 
             <label className="text-sm text-gray-300 flex items-center gap-2"><input type="checkbox" checked={comparePrev} onChange={(e)=>setComparePrev(e.target.checked)} /> Compare to previous</label>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowReport(true)}
+              className="ml-4"
+            >
+              Generate Report
+            </Button>
           </div>
+
+          {/* Monthly Report Modal */}
+          <MonthlyReport
+            isOpen={showReport}
+            onClose={() => setShowReport(false)}
+            data={{
+              month: monthNames[selectedMonth],
+              year: selectedYear,
+              totalSales: selectedAgg.totalSales,
+              totalProfit: selectedAgg.totalProfit,
+              totalInvestment: selectedAgg.totalInvestment,
+              stonesSold: selectedAgg.stonesSold,
+              stonesBought: selectedAgg.stonesBought,
+              avgHoldingDays: selectedAgg.avgHoldingDays,
+              compareData,
+              prevMonth: monthNames[prevDate.month],
+              prevYear: prevDate.year
+            }}
+          />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

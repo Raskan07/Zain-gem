@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Eye } from "lucide-react";
 import CustomCard from "@/components/sub-componets/CustomCard";
+import { ArchiveExportOptions } from "@/components/reports/ArchiveExportOptions";
 
 interface Remainder {
   id: string;
@@ -43,6 +44,48 @@ export default function ArchivesPage() {
   const [openDetail, setOpenDetail] = useState(false);
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [imageToShow, setImageToShow] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportCSV = async () => {
+    setIsExporting(true);
+    try {
+      const csvData = archives.map(r => ({
+        'Stone Name': r.stoneName,
+        'Stone Weight': r.stoneWeight,
+        'Stone Cost': r.stoneCost,
+        'Selling Price': r.sellingPrice,
+        'My Profit': r.myProfit,
+        'Party Receives': r.partyReceives,
+        'Selling Date': format(r.sellingDate, 'yyyy-MM-dd'),
+        'Payment Due Date': format(r.paymentReceivingDate, 'yyyy-MM-dd'),
+        'Duration (Days)': r.durationInDays,
+        'Stone Owner': r.stoneOwner,
+        'Owner Name': r.ownerName || '-',
+        'Buyer Type': r.buyerType,
+        'Buyer Name': r.buyerName || '-',
+        'Status': r.status,
+        'Archived At': r.archivedAt ? format(r.archivedAt, 'yyyy-MM-dd') : '-'
+      }));
+
+      const headers = Object.keys(csvData[0]);
+      const csvContent = [
+        headers.join(','),
+        ...csvData.map(row => headers.map(header => JSON.stringify(row[header as keyof typeof row])).join(','))
+      ].join('\n');
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `archives_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Failed to export CSV:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const openImage = (url: string | undefined) => {
     if (!url) return;
@@ -111,6 +154,24 @@ export default function ArchivesPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-white">Archived Remainders</h1>
         <div className="flex items-center gap-2">
+          <ArchiveExportOptions
+            data={{
+              dateRange: { 
+                from: format(new Date(), 'yyyy-MM-dd'), 
+                to: format(new Date(), 'yyyy-MM-dd') 
+              },
+              archives: archives.map(a => ({
+                title: a.stoneName,
+                archivedDate: a.archivedAt || new Date(),
+                originalDueDate: a.paymentReceivingDate,
+                status: a.status,
+                category: a.buyerType,
+                assignedTo: a.ownerName || undefined
+              }))
+            }}
+            onExportCSV={handleExportCSV}
+            isLoading={isExporting}
+          />
           <Button variant="ghost" onClick={() => router.back()}>Back</Button>
         </div>
       </div>
