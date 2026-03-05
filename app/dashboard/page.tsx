@@ -12,8 +12,8 @@ import { StoneCalendar } from "@/components/StoneCalendar";
 export default function Dashboard() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[420px_1fr_450px] min-h-[90vh]">
-      {/* Left Column - Logs - Visible on all screens */}
-      <div className="p-8 border-b lg:border-b-0 lg:border-r border-border bg-secondary/5">
+      {/* Activity Logs - Visible on all screens, appears at the end on mobile */}
+      <div className="p-8 border-t lg:border-t-0 lg:border-r border-border bg-secondary/5 order-last lg:order-first">
         <LogsCard />
       </div>
 

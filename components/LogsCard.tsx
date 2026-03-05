@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, ClipboardList } from "lucide-react";
+import { useRouter } from "next/navigation";
 import gsap from "gsap";
 import { cn } from "@/lib/utils";
 import { db } from "@/lib/firebase";
@@ -18,6 +19,7 @@ export function LogsCard() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [logs, setLogs] = useState<LogItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const q = query(
@@ -59,7 +61,10 @@ export function LogsCard() {
             </div>
             <h3 className="text-xl font-bold text-foreground">Activity Logs</h3>
         </div>
-        <button className="p-2 rounded-full border border-border text-muted-foreground hover:bg-secondary transition-colors">
+        <button 
+          onClick={() => router.push('/dashboard/logs')}
+          className="p-2 rounded-full border border-border text-muted-foreground hover:bg-secondary transition-colors"
+        >
           <ArrowUpRight className="w-4 h-4" />
         </button>
       </div>
