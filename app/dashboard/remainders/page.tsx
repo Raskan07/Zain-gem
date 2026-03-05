@@ -23,6 +23,7 @@ import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage
 // If the file is named differently or located elsewhere, update the import path accordingly.
 // Example if the file is named 'CustomCard.tsx':
 import CustomCard from "@/components/sub-componets/CustomCard";
+import { logActivity } from "@/lib/logger";
 
 // Interfaces
 interface Remainder {
@@ -195,6 +196,7 @@ export default function RemaindersPage() {
       const docRef = await addDoc(collection(db, "remainders"), remainderData);
       console.log("Remainder added successfully with ID:", docRef.id);
       
+      await logActivity(`Added new remainder for stone: ${data.stoneName}`);
       setShowAddForm(false);
     } catch (error) {
       console.error("Error adding remainder:", error);
@@ -218,6 +220,7 @@ export default function RemaindersPage() {
           status,
           updatedAt: new Date(),
         });
+        await logActivity(`Updated remainder for stone: ${remainder.stoneName}`);
         setEditingRemainder(null);
       }
     } catch (error) {
@@ -238,6 +241,7 @@ export default function RemaindersPage() {
           }
         }
         await deleteDoc(doc(db, "remainders", id));
+        await logActivity(`Deleted remainder for stone: ${remainder?.stoneName}`);
       } catch (error) {
         console.error("Error deleting remainder:", error);
       }
@@ -284,6 +288,7 @@ export default function RemaindersPage() {
 
       // remove from remainders collection
       await deleteDoc(doc(db, "remainders", id));
+      await logActivity(`Archived remainder (Payment Received): ${rem.stoneName}`);
 
       // update local state for immediate UI feedback
       setArchives((prev) => [archivedData as Remainder, ...prev]);

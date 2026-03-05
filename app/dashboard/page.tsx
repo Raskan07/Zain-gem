@@ -3,7 +3,7 @@
 import React from "react";
 import { ValentinaHero } from "@/components/ValentinaHero";
 import { DashboardStats } from "@/components/DashboardStats";
-import { ScheduleCard } from "@/components/ScheduleCard";
+import { LogsCard } from "@/components/LogsCard";
 import { SalaryTable } from "@/components/SalaryTable";
 import { HiringStatistics } from "@/components/HiringStatistics";
 import { EmployeeComposition } from "@/components/EmployeeComposition";
@@ -12,9 +12,9 @@ import { StoneCalendar } from "@/components/StoneCalendar";
 export default function Dashboard() {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[420px_1fr_450px] min-h-[90vh]">
-      {/* Left Column - Schedule - Visible on lg screens */}
-      <div className="p-8 border-r border-border hidden lg:block bg-secondary/5">
-        <ScheduleCard />
+      {/* Left Column - Logs - Visible on all screens */}
+      <div className="p-8 border-b lg:border-b-0 lg:border-r border-border bg-secondary/5">
+        <LogsCard />
       </div>
 
       {/* Center Column - Main Content */}

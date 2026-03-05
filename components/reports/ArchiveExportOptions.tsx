@@ -11,7 +11,8 @@ import { FileDown } from 'lucide-react'
 
 export function ArchiveExportOptions({
   data,
-    isLoading
+  isLoading,
+  onExportCSV
 }: {
   data: {
     dateRange: { from: string; to: string }

@@ -1,9 +1,10 @@
 "use client"
 
 import React, { useState, useEffect, useMemo } from 'react'
+import { DateRange } from "react-day-picker"
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import { DateRange, StatusFilter, getDateRangeFromType, getStatus, parseDateField, statusColors } from '@/lib/report-utils'
+import { DateRange as ReportDateRange, StatusFilter, getDateRangeFromType, getStatus, parseDateField, statusColors } from '@/lib/report-utils'
 import {
   Table,
   TableBody,
@@ -45,8 +46,8 @@ export default function ArchiveReport() {
   const [archives, setArchives] = useState<ArchiveItem[]>([])
   
   // Filters
-  const [dateRange, setDateRange] = useState<DateRange>('this-month')
-  const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date | undefined }>({
+  const [dateRange, setDateRange] = useState<ReportDateRange>('this-month')
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>({
     from: new Date(),
     to: undefined,
   })
@@ -69,11 +70,13 @@ export default function ArchiveReport() {
           const data = doc.data()
           return {
             id: doc.id,
+            title: data.title || 'Untitled',
+            status: data.status || 'unknown',
             ...data,
             archivedDate: parseDateField(data.archivedDate) || new Date(),
-            originalDueDate: parseDateField(data.originalDueDate),
-            completedDate: parseDateField(data.completedDate),
-          }
+            originalDueDate: parseDateField(data.originalDueDate) || undefined,
+            completedDate: parseDateField(data.completedDate) || undefined,
+          } as ArchiveItem
         })
         setArchives(docs)
       } catch (err) {
@@ -92,7 +95,7 @@ export default function ArchiveReport() {
     return archives.filter(archive => {
       // Date range filter
       if (dateRange === 'custom') {
-        if (!customDateRange.from || !customDateRange.to) return true
+        if (!customDateRange?.from || !customDateRange?.to) return true
         const date = archive.archivedDate
         return date >= customDateRange.from && date <= customDateRange.to
       } else {
@@ -155,7 +158,7 @@ export default function ArchiveReport() {
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex items-center gap-4 flex-wrap bg-white/5 p-4 rounded-lg">
-        <Select value={dateRange} onValueChange={(v) => setDateRange(v as DateRange)}>
+        <Select value={dateRange} onValueChange={(v) => setDateRange(v as ReportDateRange)}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Select date range" />
           </SelectTrigger>
@@ -171,7 +174,7 @@ export default function ArchiveReport() {
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-[280px] justify-start text-left font-normal">
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {customDateRange.from ? (
+                {customDateRange?.from ? (
                   customDateRange.to ? (
                     <>
                       {format(customDateRange.from, 'LLL dd, y')} -{' '}
@@ -189,11 +192,8 @@ export default function ArchiveReport() {
               <Calendar
                 initialFocus
                 mode="range"
-                selected={{ 
-                  from: customDateRange.from,
-                  to: customDateRange.to
-                }}
-                onSelect={(range) => range && setCustomDateRange(range)}
+                selected={customDateRange}
+                onSelect={setCustomDateRange}
                 numberOfMonths={2}
               />
             </PopoverContent>

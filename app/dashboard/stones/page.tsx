@@ -59,6 +59,7 @@
     deleteObject 
   } from "firebase/storage";
   import { storage } from "@/lib/firebase";
+import { logActivity } from "@/lib/logger";
 
   // Type definitions
   interface Stone {
@@ -402,6 +403,8 @@
           customId: customIdStr,
           customIdNum: nextNum,
         });
+
+        await logActivity(`Added new stone: ${newStone.name} (${customIdStr})`);
         setShowAddDialog(false);
       } catch (error) {
         console.error("Error adding stone:", error);
@@ -442,6 +445,8 @@
           profitLoss,
           updatedAt: new Date(),
         });
+
+        await logActivity(`Updated stone: ${stone.name} (${stone.customId ?? id})`);
         setEditingStone(null);
       } catch (error) {
         console.error("Error updating stone:", error);
@@ -469,6 +474,7 @@
           }
           
           await deleteDoc(doc(db, "stones", id));
+          await logActivity(`Deleted stone: ${stone?.name} (${stone?.customId ?? id})`);
         } catch (error) {
           console.error("Error deleting stone:", error);
         }

@@ -30,7 +30,6 @@ const styles = StyleSheet.create({
     color: '#666666',
   },
   table: {
-    display: 'table',
     width: '100%',
     borderStyle: 'solid',
     borderWidth: 1,

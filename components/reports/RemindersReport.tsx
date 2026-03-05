@@ -1,9 +1,10 @@
 "use client"
 
 import React, { useState, useEffect, useMemo } from 'react'
+import { DateRange } from "react-day-picker"
 import { collection, getDocs, query, where, orderBy } from 'firebase/firestore'
 import { db } from '@/lib/firebase'
-import { DateRange, StatusFilter, getDateRangeFromType, getStatus, parseDateField, statusColors } from '@/lib/report-utils'
+import { DateRange as ReportDateRange, StatusFilter, getDateRangeFromType, getStatus, parseDateField, statusColors } from '@/lib/report-utils'
 import {
   Table,
   TableBody,
@@ -44,8 +45,8 @@ export default function RemindersReport() {
   const [reminders, setReminders] = useState<Reminder[]>([])
   
   // Filters
-  const [dateRange, setDateRange] = useState<DateRange>('this-month')
-  const [customDateRange, setCustomDateRange] = useState<{ from: Date; to: Date | undefined }>({
+  const [dateRange, setDateRange] = useState<ReportDateRange>('this-month')
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>({
     from: new Date(),
     to: undefined,
   })
@@ -68,10 +69,12 @@ export default function RemindersReport() {
           const data = doc.data()
           return {
             id: doc.id,
+            title: data.title || data.stoneName || 'Untitled',
+            status: data.status || 'unknown',
             ...data,
             dueDate: parseDateField(data.dueDate),
             createdAt: parseDateField(data.createdAt) || new Date(),
-          }
+          } as Reminder
         })
         setReminders(docs)
       } catch (err) {
@@ -90,7 +93,7 @@ export default function RemindersReport() {
     return reminders.filter(reminder => {
       // Date range filter
       if (dateRange === 'custom') {
-        if (!customDateRange.from || !customDateRange.to) return true
+        if (!customDateRange?.from || !customDateRange?.to) return true
         const date = reminder.dueDate || reminder.createdAt
         return date >= customDateRange.from && date <= customDateRange.to
       } else {
@@ -153,7 +156,7 @@ export default function RemindersReport() {
     <div className="space-y-4">
       {/* Filters */}
       <div className="flex items-center gap-4 flex-wrap bg-white/5 p-4 rounded-lg">
-        <Select value={dateRange} onValueChange={(v) => setDateRange(v as DateRange)}>
+        <Select value={dateRange} onValueChange={(v) => setDateRange(v as ReportDateRange)}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Select date range" />
           </SelectTrigger>
@@ -169,7 +172,7 @@ export default function RemindersReport() {
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-[280px] justify-start text-left font-normal">
                 <CalendarIcon className="mr-2 h-4 w-4" />
-                {customDateRange.from ? (
+                {customDateRange?.from ? (
                   customDateRange.to ? (
                     <>
                       {format(customDateRange.from, 'LLL dd, y')} -{' '}
@@ -187,11 +190,8 @@ export default function RemindersReport() {
               <Calendar
                 initialFocus
                 mode="range"
-                selected={{ 
-                  from: customDateRange.from,
-                  to: customDateRange.to
-                }}
-                onSelect={(range) => range && setCustomDateRange(range)}
+                selected={customDateRange}
+                onSelect={setCustomDateRange}
                 numberOfMonths={2}
               />
             </PopoverContent>
