@@ -58,7 +58,7 @@ export default function LogsPage() {
   }, [date]);
 
   return (
-    <div className="p-6 md:p-12 flex flex-col h-full bg-background/30">
+    <div className="p-3 md:p-6 flex flex-col h-full bg-background/30">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
         <div className="flex items-center gap-4">
@@ -130,7 +130,7 @@ export default function LogsPage() {
                 <p className="text-sm font-medium text-muted-foreground animate-pulse">Syncing logs...</p>
             </div>
         ) : logs.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-80 text-center space-y-4 bg-secondary/5 rounded-[40px] border border-dashed border-border/50">
+          <div className="flex flex-col items-center justify-center h-40 text-center space-y-4 bg-secondary/5 rounded-[40px] border border-dashed border-border/50">
             <div className="p-4 rounded-full bg-secondary/10">
                 <ClipboardList className="w-8 h-8 text-muted-foreground/40" />
             </div>
@@ -149,31 +149,35 @@ export default function LogsPage() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 pb-8">
-            {logs.map((log) => (
+          <div className="relative pl-4 ml-2 border-l border-border/50 space-y-2 pb-12">
+            {logs.map((log, index) => (
               <div 
                 key={log.id} 
-                className="group relative p-6 bg-card border border-border/40 rounded-[28px] hover:border-primary/30 hover:bg-secondary/10 transition-all duration-300 shadow-sm"
+                className="group relative pl-8 py-3 bg-secondary/5 border border-transparent hover:border-primary/20 hover:bg-secondary/10 rounded-2xl transition-all duration-300"
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="w-2 h-2 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.6)]" />
-                        <h4 className="text-sm font-bold text-foreground leading-relaxed group-hover:text-primary transition-colors">
-                            {log.title}
-                        </h4>
+                {/* Timeline Dot */}
+                <div className="absolute left-[-5px] top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-background border-2 border-primary shadow-[0_0_10px_rgba(var(--primary),0.4)] group-hover:scale-125 transition-transform" />
+                
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-[13px] font-bold text-foreground leading-none group-hover:text-primary transition-colors truncate">
+                      {log.title}
+                    </h4>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 shrink-0">
+                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-secondary/20 border border-border/30">
+                      <span className="text-[10px] font-bold text-muted-foreground/70 uppercase tracking-tighter">
+                        {log.date.includes(',') ? log.date.split(',')[0].trim() : log.date}
+                      </span>
                     </div>
-                    <div className="flex items-center gap-4 text-xs font-medium text-muted-foreground/60 pl-5">
-                        <span className="flex items-center gap-1.5">
-                            {log.date.includes(',') ? log.date.split(',')[0] : log.date}
+                    {log.date.includes(',') && (
+                      <div className="px-2 py-1 rounded-lg bg-primary/5 border border-primary/10">
+                        <span className="text-[10px] font-black text-primary/80 tracking-tight">
+                          {log.date.split(',')[1].trim()}
                         </span>
-                        {log.date.includes(',') && <span className="w-1 h-1 rounded-full bg-border" />}
-                        {log.date.includes(',') && (
-                          <span className="flex items-center gap-1.5 bg-secondary/30 px-2 py-0.5 rounded-md">
-                              {log.date.split(',')[1]}
-                          </span>
-                        )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

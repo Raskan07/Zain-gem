@@ -4,7 +4,7 @@ import React from "react";
 import { ValentinaHero } from "@/components/ValentinaHero";
 import { DashboardStats } from "@/components/DashboardStats";
 import { LogsCard } from "@/components/LogsCard";
-import { SalaryTable } from "@/components/SalaryTable";
+import { NotesCard } from "@/components/NotesCard";
 import { HiringStatistics } from "@/components/HiringStatistics";
 import { EmployeeComposition } from "@/components/EmployeeComposition";
 import { StoneCalendar } from "@/components/StoneCalendar";
@@ -21,7 +21,7 @@ export default function Dashboard() {
       <div className="flex flex-col min-w-0">
         <ValentinaHero />
         <div className="p-6 md:p-12 space-y-12">
-            <SalaryTable />
+            <NotesCard />
             <div className="bg-card backdrop-blur-md p-6 md:p-10 rounded-[40px] border border-border shadow-xl">
                 <HiringStatistics />
             </div>
