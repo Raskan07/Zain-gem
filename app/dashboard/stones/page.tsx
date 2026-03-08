@@ -324,7 +324,7 @@ import { logActivity } from "@/lib/logger";
             console.warn("Date parsing error:", e);
           }
 
-          let updatedAtDate = new Date();
+          let updatedAtDate = createdAtDate;
           try {
             if (data.updatedAt?.toDate) updatedAtDate = data.updatedAt.toDate();
             else if (data.updatedAt instanceof Date) updatedAtDate = data.updatedAt;
@@ -544,14 +544,14 @@ import { logActivity } from "@/lib/logger";
     return (
       <div className="w-full max-w-7xl mx-auto p-6 space-y-8">
         {/* Header */}
-        <div className="flex items-center justify-between mb-10">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-10 gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">Stones Management</h1>
-            <p className="text-gray-300 text-lg">Manage your gem and stone inventory with Excel-like functionality</p>
+            <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-r from-white via-blue-200 to-indigo-300 bg-clip-text text-transparent tracking-tight mb-2">Stones Management</h1>
+            <p className="text-white/60 text-lg font-medium">Manage your gem and stone inventory with Excel-like functionality</p>
           </div>
           <Button 
             onClick={() => setShowAddDialog(true)}
-            className="backdrop-blur-sm bg-white/10 border-white/20 text-white hover:bg-white/20 px-6 py-3"
+            className="backdrop-blur-3xl bg-white/10 border-white/10 border text-white hover:bg-white/20 px-6 py-6 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300 font-bold"
           >
             <Plus className="h-5 w-5 mr-2" />
             Add New Stone
@@ -559,121 +559,130 @@ import { logActivity } from "@/lib/logger";
         </div>
 
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          <Card className="backdrop-blur-md bg-white/10 border-white/20 text-white shadow-xl hover:bg-white/15 transition-all duration-300">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <Gem className="h-10 w-10 text-blue-400 mr-4" />
-                <div>
-                  <p className="text-3xl font-bold">{totalStones}</p>
-                  <p className="text-sm text-gray-300">Total Stones</p>
-                </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
+          <Card className="group backdrop-blur-3xl bg-white/5 border-white/5 hover:bg-white/10 transition-all duration-500 overflow-hidden relative rounded-3xl p-2 md:p-4">
+            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <CardContent className="p-4 md:p-6 relative z-10 flex items-center justify-between">
+              <div>
+                <p className="text-white/40 text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] mb-2">Total Stones</p>
+                <p className="text-4xl md:text-5xl font-black text-blue-400 tracking-tighter">{totalStones}</p>
+              </div>
+              <div className="h-12 w-12 md:h-16 md:w-16 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.2)] md:group-hover:scale-110 transition-transform duration-500">
+                <Gem className="h-6 w-6 md:h-8 md:w-8" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="backdrop-blur-md bg-white/10 border-white/20 text-white shadow-xl hover:bg-white/15 transition-all duration-300">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <Package className="h-10 w-10 text-green-400 mr-4" />
-                <div>
-                  <p className="text-3xl font-bold">{inStockStones}</p>
-                  <p className="text-sm text-gray-300">In Stock</p>
-                </div>
+          <Card className="group backdrop-blur-3xl bg-white/5 border-white/5 hover:bg-white/10 transition-all duration-500 overflow-hidden relative rounded-3xl p-2 md:p-4">
+            <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <CardContent className="p-4 md:p-6 relative z-10 flex items-center justify-between">
+              <div>
+                <p className="text-white/40 text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] mb-2">In Stock</p>
+                <p className="text-4xl md:text-5xl font-black text-green-400 tracking-tighter">{inStockStones}</p>
+              </div>
+              <div className="h-12 w-12 md:h-16 md:w-16 rounded-2xl bg-green-500/10 flex items-center justify-center text-green-400 border border-green-500/20 shadow-[0_0_15px_rgba(34,197,94,0.2)] md:group-hover:scale-110 transition-transform duration-500">
+                <Package className="h-6 w-6 md:h-8 md:w-8" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="backdrop-blur-md bg-white/10 border-white/20 text-white shadow-xl hover:bg-white/15 transition-all duration-300">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <ShoppingCart className="h-10 w-10 text-red-400 mr-4" />
-                <div>
-                  <p className="text-3xl font-bold">{soldStones}</p>
-                  <p className="text-sm text-gray-300">Sold</p>
-                </div>
+          <Card className="group backdrop-blur-3xl bg-white/5 border-white/5 hover:bg-white/10 transition-all duration-500 overflow-hidden relative rounded-3xl p-2 md:p-4">
+            <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <CardContent className="p-4 md:p-6 relative z-10 flex items-center justify-between">
+              <div>
+                <p className="text-white/40 text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] mb-2">Sold</p>
+                <p className="text-4xl md:text-5xl font-black text-red-400 tracking-tighter">{soldStones}</p>
+              </div>
+              <div className="h-12 w-12 md:h-16 md:w-16 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-400 border border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.2)] md:group-hover:scale-110 transition-transform duration-500">
+                <ShoppingCart className="h-6 w-6 md:h-8 md:w-8" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="backdrop-blur-md bg-white/10 border-white/20 text-white shadow-xl hover:bg-white/15 transition-all duration-300">
-            <CardContent className="p-6">
-              <div className="flex items-center">
-                <Clock className="h-10 w-10 text-yellow-400 mr-4" />
-                <div>
-                  <p className="text-3xl font-bold">{pendingStones}</p>
-                  <p className="text-sm text-gray-300">Pending</p>
-                </div>
+          <Card className="group backdrop-blur-3xl bg-white/5 border-white/5 hover:bg-white/10 transition-all duration-500 overflow-hidden relative rounded-3xl p-2 md:p-4">
+            <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <CardContent className="p-4 md:p-6 relative z-10 flex items-center justify-between">
+              <div>
+                <p className="text-white/40 text-[10px] md:text-xs font-bold uppercase tracking-[0.2em] mb-2">Pending</p>
+                <p className="text-4xl md:text-5xl font-black text-yellow-400 tracking-tighter">{pendingStones}</p>
+              </div>
+              <div className="h-12 w-12 md:h-16 md:w-16 rounded-2xl bg-yellow-500/10 flex items-center justify-center text-yellow-400 border border-yellow-500/20 shadow-[0_0_15px_rgba(234,179,8,0.2)] md:group-hover:scale-110 transition-transform duration-500">
+                <Clock className="h-6 w-6 md:h-8 md:w-8" />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Search and Filters */}
-        <Card className="backdrop-blur-md bg-white/10 border-white/20 text-white shadow-xl">
-          <CardContent className="p-4">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+        <div className="flex flex-col xl:flex-row gap-8">
+          {/* Main Content Area */}
+          <div className="xl:w-3/4 space-y-8">
+            {/* Search and Filters */}
+            <Card className="backdrop-blur-3xl bg-white/5 border-white/5 shadow-2xl rounded-[2rem] overflow-hidden">
+          <CardContent className="p-4 md:p-6">
+            <div className="flex flex-col lg:flex-row gap-4">
+              <div className="flex-1 relative group">
+                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white/40 h-5 w-5 group-hover:text-blue-400 transition-colors" />
                 <Input
                   type="text"
                   placeholder="Search stones by name or ID..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 backdrop-blur-sm bg-white/5 border-white/20 text-white placeholder-gray-400"
+                  className="pl-12 h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white placeholder-white/40 rounded-2xl focus:bg-white/10 transition-all shadow-inner text-base"
                 />
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40 backdrop-blur-sm bg-white/5 border-white/20 text-white">
-                  <SelectValue placeholder="Filter by status" />
-                </SelectTrigger>
-                <SelectContent className="backdrop-blur-md bg-white/10 border-white/20">
-                  <SelectItem value="all">All Status</SelectItem>
-                  {statusOptions.map(status => (
-                    <SelectItem key={status} value={status}>{status}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={nameFilter} onValueChange={setNameFilter}>
-                <SelectTrigger className="w-40 backdrop-blur-sm bg-white/5 border-white/20 text-white">
-                  <SelectValue placeholder="Filter by type" />
-                </SelectTrigger>
-                <SelectContent className="backdrop-blur-md bg-white/10 border-white/20">
-                  <SelectItem value="all">All Types</SelectItem>
-                  {stoneTypes.map(type => (
-                    <SelectItem key={type} value={type}>{type}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="backdrop-blur-sm bg-white/10 border-white/20 text-white hover:bg-white/20">
-                    <Download className="h-4 w-4 mr-2" />
-                    Export
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="backdrop-blur-md bg-white/10 border-white/20 text-white">
-                  <DropdownMenuItem onClick={() => handleExport('all')}>All Stones (Print/PDF)</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleExport('day')}>Today (Print/PDF)</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleExport('week')}>This Week (Print/PDF)</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleExport('month')}>This Month (Print/PDF)</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <div className="flex flex-wrap sm:flex-nowrap gap-4">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full sm:w-48 h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all font-semibold border border-white/10">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-900 border-white/10 text-white rounded-2xl">
+                    <SelectItem value="all">All Status</SelectItem>
+                    {statusOptions.map(status => (
+                      <SelectItem key={status} value={status}>{status}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={nameFilter} onValueChange={setNameFilter}>
+                  <SelectTrigger className="w-full sm:w-48 h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all font-semibold border border-white/10">
+                    <SelectValue placeholder="Filter by type" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-900 border-white/10 text-white rounded-2xl">
+                    <SelectItem value="all">All Types</SelectItem>
+                    {stoneTypes.map(type => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="w-full sm:w-auto h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white rounded-2xl font-bold transition-all px-6">
+                      <Download className="h-5 w-5 mr-2" />
+                      Export
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="bg-slate-900 border-white/10 text-white rounded-2xl">
+                    <DropdownMenuItem className="focus:bg-white/10 cursor-pointer rounded-xl" onClick={() => handleExport('all')}>All Stones (Print/PDF)</DropdownMenuItem>
+                    <DropdownMenuItem className="focus:bg-white/10 cursor-pointer rounded-xl" onClick={() => handleExport('day')}>Today (Print/PDF)</DropdownMenuItem>
+                    <DropdownMenuItem className="focus:bg-white/10 cursor-pointer rounded-xl" onClick={() => handleExport('week')}>This Week (Print/PDF)</DropdownMenuItem>
+                    <DropdownMenuItem className="focus:bg-white/10 cursor-pointer rounded-xl" onClick={() => handleExport('month')}>This Month (Print/PDF)</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* Stones Table */}
-        <Card className="backdrop-blur-md bg-white/10 border-white/20 text-white shadow-xl">
-          <CardHeader>
-            <CardTitle>Stone Inventory</CardTitle>
-            <CardDescription className="text-gray-300">
+        <Card className="backdrop-blur-3xl bg-white/5 border-white/10 text-white shadow-2xl rounded-[2.5rem] overflow-hidden">
+          <CardHeader className="p-6 md:p-8 pb-4">
+            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">Stone Inventory</CardTitle>
+            <CardDescription className="text-white/40 font-medium">
               Complete list of all stones with real-time updates
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-0 md:p-6 md:pt-0">
             <div className="overflow-x-auto">
-              <div className="border border-white/20 rounded-lg overflow-hidden backdrop-blur-sm bg-white/5">
+              <div className="border-y md:border border-white/10 md:rounded-[2rem] overflow-hidden backdrop-blur-sm bg-white/[0.02]">
                 <Table>
                   <TableHeader>
                     <TableRow className="backdrop-blur-sm bg-white/10">
@@ -758,25 +767,25 @@ import { logActivity } from "@/lib/logger";
                               variant="ghost"
                               size="sm"
                               onClick={() => setEditingStone(stone)}
-                              className="text-white hover:bg-white/10"
+                              className="text-white/60 hover:text-white hover:bg-blue-500/20 rounded-xl"
                             >
-                              <Edit className="h-3 w-3" />
+                              <Edit className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => openStoneReport(stone)}
-                              className="text-white hover:bg-white/10"
+                              className="text-white/60 hover:text-white hover:bg-green-500/20 rounded-xl"
                             >
-                              <Download className="h-3 w-3" />
+                              <Eye className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleDeleteStone(stone.id)}
-                              className="text-white hover:bg-white/10"
+                              className="text-white/60 hover:text-white hover:bg-red-500/20 rounded-xl"
                             >
-                              <Trash2 className="h-3 w-3" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
                         </TableCell>
@@ -787,39 +796,111 @@ import { logActivity } from "@/lib/logger";
               </div>
             </div>
           </CardContent>
-        </Card>
+          </Card>
+        </div> {/* End Main Content Area */}
+
+        {/* Live Activity Sidebar */}
+        <div className="xl:w-1/4">
+          <Card className="backdrop-blur-3xl bg-white/5 border-white/5 shadow-2xl rounded-[2.5rem] overflow-hidden sticky top-8">
+            <CardHeader className="p-6 md:p-8 pb-4 border-b border-white/10">
+              <CardTitle className="text-xl font-bold text-white flex items-center">
+                <span className="h-2.5 w-2.5 rounded-full bg-green-500 animate-pulse mr-3 shadow-[0_0_10px_rgba(34,197,94,0.8)]"></span>
+                Live Feed
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 md:p-8">
+              <div className="relative border-l-2 border-white/10 ml-3 space-y-8 pb-4">
+                {[...stones]
+                  .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+                  .slice(0, 10)
+                  .map((stone) => {
+                    const isNew = Math.abs(stone.updatedAt.getTime() - stone.createdAt.getTime()) < 1000;
+                    const isSold = stone.status === "Sold";
+                    
+                    let iconBg = "bg-blue-500/20";
+                    let iconColor = "text-blue-400";
+                    let glowColor = "shadow-[0_0_15px_rgba(59,130,246,0.3)]";
+                    let actionText = "Modified";
+                    let IconComponent = Edit;
+
+                    if (isSold) {
+                      iconBg = "bg-red-500/20";
+                      iconColor = "text-red-400";
+                      glowColor = "shadow-[0_0_15px_rgba(239,68,68,0.3)]";
+                      actionText = "Sold";
+                      IconComponent = ShoppingCart;
+                    } else if (isNew) {
+                      iconBg = "bg-green-500/20";
+                      iconColor = "text-green-400";
+                      glowColor = "shadow-[0_0_15px_rgba(34,197,94,0.3)]";
+                      actionText = "Added";
+                      IconComponent = Plus;
+                    }
+
+                    return (
+                      <div key={`timeline-${stone.id}`} className="relative pl-6 sm:pl-8 group">
+                        {/* Timeline Node */}
+                        <div className={`absolute -left-[17px] top-1 h-8 w-8 rounded-full border border-slate-900 ${iconBg} ${iconColor} ${glowColor} flex items-center justify-center`}>
+                          <IconComponent className="h-4 w-4" />
+                        </div>
+                        
+                        {/* Content Card */}
+                        <div className="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-4 hover:bg-white/10 transition-colors">
+                          <div className="flex justify-between items-start mb-2">
+                            <span className="font-bold text-white text-sm">{stone.name}</span>
+                            <span className="text-xs font-mono text-white/40">{stone.customId ?? String(stone.customIdNum).padStart(3, '0')}</span>
+                          </div>
+                          <div className="text-sm text-white/70 mb-2">
+                            {actionText} <span className="text-white font-medium">{stone.weight}ct</span>
+                          </div>
+                          <div className="text-xs text-white/40 font-medium">
+                            {stone.updatedAt.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })} • {stone.updatedAt.toLocaleDateString('en-US', { month: 'short', day: 'numeric'})}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div> {/* End Live Activity Sidebar */}
+      </div>
 
         {/* Add Stone Dialog */}
         <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-          <DialogContent className="backdrop-blur-md bg-white/10 border-white/20 text-white shadow-2xl max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Add New Stone</DialogTitle>
-            </DialogHeader>
-            <AddStoneForm onSubmit={handleAddStone} onCancel={() => setShowAddDialog(false)} />
+          <DialogContent className="max-w-7xl w-[95vw] md:w-[90vw] max-h-[92vh] overflow-y-auto backdrop-blur-3xl bg-slate-950/80 border border-white/10 text-white shadow-[0_0_50px_rgba(0,0,0,0.8)] rounded-3xl md:rounded-[2rem] p-0 border-none">
+            <div className="p-6 md:p-10 space-y-8">
+              <DialogHeader className="pb-4">
+                <DialogTitle className="text-3xl md:text-5xl font-black bg-gradient-to-r from-white via-blue-200 to-indigo-300 bg-clip-text text-transparent">Add New Stone</DialogTitle>
+              </DialogHeader>
+              <AddStoneForm onSubmit={handleAddStone} onCancel={() => setShowAddDialog(false)} />
+            </div>
           </DialogContent>
         </Dialog>
 
         {/* Edit Stone Dialog */}
         <Dialog open={!!editingStone} onOpenChange={() => setEditingStone(null)}>
-          <DialogContent className="backdrop-blur-md bg-white/10 border-white/20 text-white shadow-2xl max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Edit Stone</DialogTitle>
-            </DialogHeader>
-            {editingStone && (
-              <EditStoneForm 
-                stone={editingStone} 
-                onSubmit={(updatedData) => handleEditStone(editingStone.id, updatedData)} 
-                onCancel={() => setEditingStone(null)} 
-              />
-            )}
+          <DialogContent className="max-w-7xl w-[95vw] md:w-[90vw] max-h-[92vh] overflow-y-auto backdrop-blur-3xl bg-slate-950/80 border border-white/10 text-white shadow-[0_0_50px_rgba(0,0,0,0.8)] rounded-3xl md:rounded-[2rem] p-0 border-none">
+            <div className="p-6 md:p-10 space-y-8">
+              <DialogHeader className="pb-4">
+                <DialogTitle className="text-3xl md:text-5xl font-black bg-gradient-to-r from-white via-blue-200 to-indigo-300 bg-clip-text text-transparent">Edit Stone</DialogTitle>
+              </DialogHeader>
+              {editingStone && (
+                <EditStoneForm 
+                  stone={editingStone} 
+                  onSubmit={(updatedData) => handleEditStone(editingStone.id, updatedData)} 
+                  onCancel={() => setEditingStone(null)} 
+                />
+              )}
+            </div>
           </DialogContent>
         </Dialog>
 
         {/* Image Modal */}
         <Dialog open={showImageModal} onOpenChange={setShowImageModal}>
-          <DialogContent className="backdrop-blur-md bg-white/10 border-white/20 text-white shadow-2xl max-w-4xl">
-            <DialogHeader>
-              <DialogTitle>Stone Image</DialogTitle>
+          <DialogContent className="backdrop-blur-3xl bg-slate-950/90 border-white/10 text-white shadow-[0_0_50px_rgba(0,0,0,0.8)] rounded-3xl md:rounded-[2rem] max-w-5xl">
+            <DialogHeader className="pb-4">
+              <DialogTitle className="text-2xl font-black">Stone Image</DialogTitle>
             </DialogHeader>
             <div className="flex justify-center">
               {selectedImage && (
@@ -912,14 +993,14 @@ import { logActivity } from "@/lib/logger";
 
     return (
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-6">
           <div>
             <Label htmlFor="name">Name</Label>
             <Select value={formData.name} onValueChange={(value) => setFormData({...formData, name: value})}>
-              <SelectTrigger className="backdrop-blur-sm bg-white/5 border-white/20 text-white">
+              <SelectTrigger className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4">
                 <SelectValue placeholder="Select stone type" />
               </SelectTrigger>
-              <SelectContent className="backdrop-blur-md bg-white/10 border-white/20">
+              <SelectContent className="bg-slate-900 border-white/10 text-white rounded-2xl">
                 {stoneTypes.map(type => (
                   <SelectItem key={type} value={type}>{type}</SelectItem>
                 ))}
@@ -934,7 +1015,7 @@ import { logActivity } from "@/lib/logger";
               step="0.01"
               value={formData.weightInRough}
               onChange={(e) => setFormData({...formData, weightInRough: parseFloat(e.target.value) || 0})}
-              className="backdrop-blur-sm bg-white/5 border-white/20 text-white"
+              className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4"
               required
             />
           </div>
@@ -946,13 +1027,13 @@ import { logActivity } from "@/lib/logger";
               step="0.01"
               value={formData.weight}
               onChange={(e) => setFormData({...formData, weight: parseFloat(e.target.value) || 0})}
-              className="backdrop-blur-sm bg-white/5 border-white/20 text-white"
+              className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4"
               required
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-6">
           <div>
             <Label htmlFor="stoneCost">Stone Cost (LKR)</Label>
             <Input
@@ -960,7 +1041,7 @@ import { logActivity } from "@/lib/logger";
               type="number"
               value={formData.stoneCost}
               onChange={(e) => setFormData({...formData, stoneCost: parseFloat(e.target.value) || 0})}
-              className="backdrop-blur-sm bg-white/5 border-white/20 text-white"
+              className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4"
               required
             />
           </div>
@@ -971,7 +1052,7 @@ import { logActivity } from "@/lib/logger";
               type="number"
               value={formData.cuttingCost}
               onChange={(e) => setFormData({...formData, cuttingCost: parseFloat(e.target.value) || 0})}
-              className="backdrop-blur-sm bg-white/5 border-white/20 text-white"
+              className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4"
               required
             />
           </div>
@@ -982,13 +1063,13 @@ import { logActivity } from "@/lib/logger";
               type="number"
               value={formData.polishCost}
               onChange={(e) => setFormData({...formData, polishCost: parseFloat(e.target.value) || 0})}
-              className="backdrop-blur-sm bg-white/5 border-white/20 text-white"
+              className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4"
               required
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-6">
           <div>
             <Label htmlFor="treatmentCost">Treatment Cost (LKR)</Label>
             <Input
@@ -996,7 +1077,7 @@ import { logActivity } from "@/lib/logger";
               type="number"
               value={formData.treatmentCost}
               onChange={(e) => setFormData({...formData, treatmentCost: parseFloat(e.target.value) || 0})}
-              className="backdrop-blur-sm bg-white/5 border-white/20 text-white"
+              className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4"
               required
             />
           </div>
@@ -1007,7 +1088,7 @@ import { logActivity } from "@/lib/logger";
               type="number"
               value={formData.otherCost}
               onChange={(e) => setFormData({...formData, otherCost: parseFloat(e.target.value) || 0})}
-              className="backdrop-blur-sm bg-white/5 border-white/20 text-white"
+              className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4"
               required
             />
           </div>
@@ -1018,7 +1099,7 @@ import { logActivity } from "@/lib/logger";
               type="number"
               value={formData.priceToSell}
               onChange={(e) => setFormData({...formData, priceToSell: parseFloat(e.target.value) || 0})}
-              className="backdrop-blur-sm bg-white/5 border-white/20 text-white"
+              className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4"
               required
             />
           </div>
@@ -1034,7 +1115,7 @@ import { logActivity } from "@/lib/logger";
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-6">
           <div>
             <Label htmlFor="soldPrice">Sold Price (LKR)</Label>
             <Input
@@ -1042,17 +1123,17 @@ import { logActivity } from "@/lib/logger";
               type="number"
               value={formData.soldPrice}
               onChange={(e) => setFormData({...formData, soldPrice: parseFloat(e.target.value) || 0})}
-              className="backdrop-blur-sm bg-white/5 border-white/20 text-white"
+              className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4"
               placeholder="0 if not sold"
             />
           </div>
           <div>
             <Label htmlFor="status">Status</Label>
             <Select value={formData.status} onValueChange={(value: "In Stock" | "Sold" | "Pending") => setFormData({...formData, status: value})}>
-              <SelectTrigger className="backdrop-blur-sm bg-white/5 border-white/20 text-white">
+              <SelectTrigger className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="backdrop-blur-md bg-white/10 border-white/20">
+              <SelectContent className="bg-slate-900 border-white/10 text-white rounded-2xl">
                 {statusOptions.map(status => (
                   <SelectItem key={status} value={status}>{status}</SelectItem>
                 ))}
@@ -1062,10 +1143,10 @@ import { logActivity } from "@/lib/logger";
           <div>
             <Label htmlFor="treatment">Treatment</Label>
             <Select value={formData.treatment} onValueChange={(value: "Natural" | "Heat" | "Electric") => setFormData({...formData, treatment: value})}>
-              <SelectTrigger className="backdrop-blur-sm bg-white/5 border-white/20 text-white">
+              <SelectTrigger className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="backdrop-blur-md bg-white/10 border-white/20">
+              <SelectContent className="bg-slate-900 border-white/10 text-white rounded-2xl">
                 {treatmentOptions.map(treatment => (
                   <SelectItem key={treatment} value={treatment}>{treatment}</SelectItem>
                 ))}
@@ -1143,11 +1224,11 @@ import { logActivity } from "@/lib/logger";
           )}
         </div>
 
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onCancel} className="backdrop-blur-sm bg-white/10 border-white/20 text-white hover:bg-white/20">
+        <div className="flex flex-col sm:flex-row justify-end gap-4 pt-6 border-t border-white/10">
+          <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white rounded-2xl font-bold transition-all px-8">
             Cancel
           </Button>
-          <Button type="submit" className="backdrop-blur-sm bg-white/10 border-white/20 text-white hover:bg-white/20">
+          <Button type="submit" className="w-full sm:w-auto h-14 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold transition-all shadow-lg px-8 border-none">
             Add Stone
           </Button>
         </div>
@@ -1230,14 +1311,14 @@ import { logActivity } from "@/lib/logger";
 
     return (
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-6">
           <div>
             <Label htmlFor="edit-name">Name</Label>
             <Select value={formData.name} onValueChange={(value) => setFormData({...formData, name: value})}>
-              <SelectTrigger className="backdrop-blur-sm bg-white/5 border-white/20 text-white">
+              <SelectTrigger className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="backdrop-blur-md bg-white/10 border-white/20">
+              <SelectContent className="bg-slate-900 border-white/10 text-white rounded-2xl">
                 {stoneTypes.map(type => (
                   <SelectItem key={type} value={type}>{type}</SelectItem>
                 ))}
@@ -1252,7 +1333,7 @@ import { logActivity } from "@/lib/logger";
               step="0.01"
               value={formData.weightInRough}
               onChange={(e) => setFormData({...formData, weightInRough: parseFloat(e.target.value) || 0})}
-              className="backdrop-blur-sm bg-white/5 border-white/20 text-white"
+              className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4"
               required
             />
           </div>
@@ -1264,13 +1345,13 @@ import { logActivity } from "@/lib/logger";
               step="0.01"
               value={formData.weight}
               onChange={(e) => setFormData({...formData, weight: parseFloat(e.target.value) || 0})}
-              className="backdrop-blur-sm bg-white/5 border-white/20 text-white"
+              className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4"
               required
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-6">
           <div>
             <Label htmlFor="edit-stoneCost">Stone Cost (LKR)</Label>
             <Input
@@ -1278,7 +1359,7 @@ import { logActivity } from "@/lib/logger";
               type="number"
               value={formData.stoneCost}
               onChange={(e) => setFormData({...formData, stoneCost: parseFloat(e.target.value) || 0})}
-              className="backdrop-blur-sm bg-white/5 border-white/20 text-white"
+              className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4"
               required
             />
           </div>
@@ -1289,7 +1370,7 @@ import { logActivity } from "@/lib/logger";
               type="number"
               value={formData.cuttingCost}
               onChange={(e) => setFormData({...formData, cuttingCost: parseFloat(e.target.value) || 0})}
-              className="backdrop-blur-sm bg-white/5 border-white/20 text-white"
+              className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4"
               required
             />
           </div>
@@ -1300,13 +1381,13 @@ import { logActivity } from "@/lib/logger";
               type="number"
               value={formData.polishCost}
               onChange={(e) => setFormData({...formData, polishCost: parseFloat(e.target.value) || 0})}
-              className="backdrop-blur-sm bg-white/5 border-white/20 text-white"
+              className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4"
               required
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-6">
           <div>
             <Label htmlFor="edit-treatmentCost">Treatment Cost (LKR)</Label>
             <Input
@@ -1314,7 +1395,7 @@ import { logActivity } from "@/lib/logger";
               type="number"
               value={formData.treatmentCost}
               onChange={(e) => setFormData({...formData, treatmentCost: parseFloat(e.target.value) || 0})}
-              className="backdrop-blur-sm bg-white/5 border-white/20 text-white"
+              className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4"
               required
             />
           </div>
@@ -1325,7 +1406,7 @@ import { logActivity } from "@/lib/logger";
               type="number"
               value={formData.otherCost}
               onChange={(e) => setFormData({...formData, otherCost: parseFloat(e.target.value) || 0})}
-              className="backdrop-blur-sm bg-white/5 border-white/20 text-white"
+              className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4"
               required
             />
           </div>
@@ -1336,7 +1417,7 @@ import { logActivity } from "@/lib/logger";
                 type="number"
                 value={formData.priceToSell}
                 onChange={(e) => setFormData({...formData, priceToSell: parseFloat(e.target.value) || 0})}
-                className="backdrop-blur-sm bg-white/5 border-white/20 text-white"
+                className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4"
                 required
               />
           </div>
@@ -1352,7 +1433,7 @@ import { logActivity } from "@/lib/logger";
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-6">
           <div>
             <Label htmlFor="edit-soldPrice">Sold Price (LKR)</Label>
             <Input
@@ -1360,17 +1441,17 @@ import { logActivity } from "@/lib/logger";
               type="number"
               value={formData.soldPrice}
               onChange={(e) => setFormData({...formData, soldPrice: parseFloat(e.target.value) || 0})}
-              className="backdrop-blur-sm bg-white/5 border-white/20 text-white"
+              className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4"
               placeholder="0 if not sold"
             />
           </div>
           <div>
             <Label htmlFor="edit-status">Status</Label>
             <Select value={formData.status} onValueChange={(value: "In Stock" | "Sold" | "Pending") => setFormData({...formData, status: value})}>
-              <SelectTrigger className="backdrop-blur-sm bg-white/5 border-white/20 text-white">
+              <SelectTrigger className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="backdrop-blur-md bg-white/10 border-white/20">
+              <SelectContent className="bg-slate-900 border-white/10 text-white rounded-2xl">
                 {statusOptions.map(status => (
                   <SelectItem key={status} value={status}>{status}</SelectItem>
                 ))}
@@ -1380,10 +1461,10 @@ import { logActivity } from "@/lib/logger";
           <div>
             <Label htmlFor="edit-treatment">Treatment</Label>
             <Select value={formData.treatment} onValueChange={(value: "Natural" | "Heat" | "Electric") => setFormData({...formData, treatment: value})}>
-              <SelectTrigger className="backdrop-blur-sm bg-white/5 border-white/20 text-white">
+              <SelectTrigger className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="backdrop-blur-md bg-white/10 border-white/20">
+              <SelectContent className="bg-slate-900 border-white/10 text-white rounded-2xl">
                 {treatmentOptions.map(treatment => (
                   <SelectItem key={treatment} value={treatment}>{treatment}</SelectItem>
                 ))}
@@ -1460,11 +1541,11 @@ import { logActivity } from "@/lib/logger";
           )}
         </div>
 
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onCancel} className="backdrop-blur-sm bg-white/10 border-white/20 text-white hover:bg-white/20">
+        <div className="flex flex-col sm:flex-row justify-end gap-4 pt-6 border-t border-white/10">
+          <Button type="button" variant="outline" onClick={onCancel} className="w-full sm:w-auto h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white rounded-2xl font-bold transition-all px-8">
             Cancel
           </Button>
-          <Button type="submit" className="backdrop-blur-sm bg-white/10 border-white/20 text-white hover:bg-white/20">
+          <Button type="submit" className="w-full sm:w-auto h-14 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-bold transition-all shadow-lg px-8 border-none">
             Update Stone
           </Button>
         </div>
