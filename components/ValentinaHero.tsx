@@ -10,12 +10,25 @@ const stats = [
   { label: "Output", value: "5%", color: "#2D2D2D", outline: true },
 ];
 
-export function ValentinaHero() {
+interface ValentinaHeroProps {
+  totalStones: number;
+  soldStones: number;
+  soldPercentage: number;
+}
+
+export function ValentinaHero({ totalStones, soldStones, soldPercentage }: ValentinaHeroProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [profile, setProfile] = useState<{ name: string; photoURL: string | null }>({
     name: "Valentina",
     photoURL: null
   });
+
+  const stats = [
+    { label: "Total Stones", value: totalStones.toString(), color: "#2D2D2D" },
+    { label: "Sold Stones", value: soldStones.toString(), color: "#FFD700" },
+    { label: "Sales Ratio", value: `${Math.round(soldPercentage)}%`, color: "#E0E0E0", dashed: true },
+    { label: "Profitability", value: "95%", color: "#2D2D2D", outline: true },
+  ];
 
   useEffect(() => {
     // Listen for profile changes
@@ -65,7 +78,7 @@ export function ValentinaHero() {
                         stroke="currentColor"
                         strokeWidth="2"
                         strokeDasharray="138"
-                        strokeDashoffset={138 - (138 * 5) / 100}
+                        strokeDashoffset={138 - (138 * 95) / 100}
                         className="transition-all duration-1000 text-foreground"
                       />
                     </svg>
@@ -84,13 +97,7 @@ export function ValentinaHero() {
                  </div>
                ) : (
                 <div className="flex items-center gap-2">
-                  <div className="w-48 h-6 rounded-full bg-secondary overflow-hidden">
-                    <div 
-                      className="h-full rounded-full transition-all duration-1000" 
-                      style={{ width: stat.value, backgroundColor: stat.color }} 
-                    />
-                  </div>
-                  <span className="text-xs font-bold text-foreground">{stat.value}</span>
+                  <span className="text-4xl font-bold text-foreground">{stat.value}</span>
                 </div>
                )}
             </div>

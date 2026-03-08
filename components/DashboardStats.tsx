@@ -10,8 +10,20 @@ const stats = [
   { label: "Projects", value: 185, icon: Briefcase },
 ];
 
-export function DashboardStats() {
+interface DashboardStatsProps {
+  activeVault: number;
+  recentTrades: number;
+  gemRecords: number;
+}
+
+export function DashboardStats({ activeVault, recentTrades, gemRecords }: DashboardStatsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const stats = [
+    { label: "Active Vault", value: activeVault, icon: Users },
+    { label: "Recent Trades", value: recentTrades, icon: UserPlus },
+    { label: "Gem Records", value: gemRecords, icon: Briefcase },
+  ];
 
   useEffect(() => {
     if (containerRef.current) {
@@ -40,7 +52,7 @@ export function DashboardStats() {
         }
       });
     }
-  }, []);
+  }, [activeVault, recentTrades, gemRecords]);
 
   return (
     <div ref={containerRef} className="flex items-center justify-between p-10 py-8">

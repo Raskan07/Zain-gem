@@ -102,7 +102,6 @@ export default function Home() {
                   transition={{ delay: 0.2 }}
                   className="text-5xl md:text-7xl font-bold text-white tracking-widest uppercase italic"
                 >
-                  ZAIN GEMS
                 </motion.h1>
                 <motion.p 
                   initial={{ opacity: 0 }}
@@ -199,7 +198,6 @@ export default function Home() {
                     </Button>
                     
                     <p className="text-center text-[10px] text-white/10 font-mono tracking-[0.5em] uppercase">
-                      HINT: 123456
                     </p>
                   </div>
                 </CardContent>
