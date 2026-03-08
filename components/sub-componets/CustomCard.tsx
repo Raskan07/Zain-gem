@@ -1,7 +1,8 @@
-import React from 'react'
+import React, { useRef } from 'react'
 import { ReactNode } from 'react';
 import { Button } from '../ui/button';
-import { Edit, Eye, Trash2 } from 'lucide-react';
+import { Edit, Eye, Trash2, Calendar, Weight, User, CircleDollarSign } from 'lucide-react';
+import gsap from 'gsap';
 
 type Remainder = {
     id: string | number;
@@ -36,110 +37,157 @@ function CustomCard({
     getStatusBadge,
     calculateDaysRemaining,
 }: CustomCradProps) {
+    const cardRef = useRef<HTMLDivElement>(null);
+
+    const handleMouseEnter = () => {
+        gsap.to(cardRef.current, {
+            scale: 1.02,
+            duration: 0.4,
+            ease: "power2.out",
+            borderColor: "rgba(59, 130, 246, 0.5)",
+            backgroundColor: "rgba(255, 255, 255, 0.08)",
+            boxShadow: "0 20px 40px -20px rgba(0, 0, 0, 0.5), 0 0 20px rgba(59, 130, 246, 0.2)"
+        });
+    };
+
+    const handleMouseLeave = () => {
+        gsap.to(cardRef.current, {
+            scale: 1,
+            duration: 0.4,
+            ease: "power2.out",
+            borderColor: "rgba(255, 255, 255, 0.1)",
+            backgroundColor: "rgba(255, 255, 255, 0.05)",
+            boxShadow: "none"
+        });
+    };
+
     // Defensive guard: if remainder is missing, render a lightweight placeholder
     if (!remainder) {
         return (
-            <div className="p-4 rounded-lg border border-white/10 bg-white/5 text-white/60">
-                Missing remainder
+            <div className="p-6 rounded-2xl border border-white/10 bg-white/5 text-white/40 italic">
+                Missing remainder data
             </div>
         );
     }
 
+    const daysLeft = calculateDaysRemaining(remainder.paymentReceivingDate);
+    const isOverdue = daysLeft < 0;
+
     return (
         <div
-            key={remainder.id}
-            className="p-4 backdrop-blur-sm bg-white/5 rounded-lg border border-white/10 hover:bg-white/10 transition-all cursor-pointer"
+            ref={cardRef}
+            className="group p-6 backdrop-blur-md bg-white/5 rounded-3xl border border-white/10 transition-all cursor-pointer relative overflow-hidden"
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
             onClick={() => {
                 if (onDetail) onDetail();
             }}
         >
-            <div className="flex justify-between items-start mb-3">
-                <h3 className="font-bold text-white text-lg">{remainder.stoneName}</h3>
+            {/* Background Glow Effect */}
+            <div className="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/10 blur-[80px] rounded-full group-hover:bg-blue-500/20 transition-colors" />
+            
+            <div className="flex justify-between items-start mb-6 relative z-10">
+                <div className="flex flex-col gap-1">
+                    <h3 className="font-extrabold text-white text-xl tracking-tight leading-tight group-hover:text-blue-200 transition-colors">
+                        {remainder.stoneName}
+                    </h3>
+                    <span className="text-white/40 text-xs font-bold uppercase tracking-widest flex items-center gap-1">
+                        <User className="h-3 w-3" />
+                        {remainder.buyerType === "local" ? "Local Buyer" : "Chinese Buyer"}
+                    </span>
+                </div>
                 {getStatusBadge(remainder.status)}
             </div>
 
-            <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                    <span className="text-white/60">Weight:</span>
-                    <span className="text-white font-medium">{remainder.stoneWeight}crt</span>
+            <div className="space-y-4 relative z-10">
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="p-3 rounded-2xl bg-white/5 border border-white/5 space-y-1">
+                        <span className="text-white/40 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                            <Weight className="h-3 w-3" /> Weight
+                        </span>
+                        <p className="text-white font-bold">{remainder.stoneWeight}<span className="text-xs font-normal ml-0.5 opacity-60">crt</span></p>
+                    </div>
+                    <div className="p-3 rounded-2xl bg-white/5 border border-white/5 space-y-1">
+                        <span className="text-white/40 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                            <CircleDollarSign className="h-3 w-3" /> Price
+                        </span>
+                        <p className="text-white font-bold"><span className="text-xs font-normal mr-0.5 opacity-60">LKR</span>{remainder.sellingPrice.toLocaleString()}</p>
+                    </div>
                 </div>
-                <div className="flex justify-between">
-                    <span className="text-white/60">Selling Price:</span>
-                    <span className="text-white font-medium">LKR {remainder.sellingPrice.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
-                    <span className="text-white/60">Days Left:</span>
-                    <span className={`font-bold ${calculateDaysRemaining(remainder.paymentReceivingDate) < 0 ? 'text-red-400' : 'text-green-400'}`}>
-                        {(() => {
-                            const daysLeft = calculateDaysRemaining(remainder.paymentReceivingDate);
-                            if (daysLeft < 0) {
-                                return `${Math.abs(daysLeft)}d overdue`;
-                            } else if (daysLeft === 0) {
-                                return "Due today";
-                            } else {
-                                return `${daysLeft}d left`;
-                            }
-                        })()}
-                    </span>
-                </div>
-                <div className="flex justify-between">
-                    <span className="text-white/60">Buyer:</span>
-                    <span className="text-white font-medium">{remainder.buyerType === "local" ? "Local" : "Chinese"}</span>
+
+                <div className={`p-4 rounded-2xl border flex items-center justify-between transition-colors ${
+                    isOverdue ? 'bg-red-500/10 border-red-500/20' : 'bg-green-500/10 border-green-500/20'
+                }`}>
+                    <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-lg ${isOverdue ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'}`}>
+                            <Calendar className="h-4 w-4" />
+                        </div>
+                        <div>
+                            <p className="text-[10px] font-bold uppercase tracking-wider opacity-60 text-white">Payment Status</p>
+                            <p className={`font-bold text-sm ${isOverdue ? 'text-red-400' : 'text-green-400'}`}>
+                                {(() => {
+                                    if (daysLeft < 0) return `${Math.abs(daysLeft)} days Overdue`;
+                                    if (daysLeft === 0) return "Due Today";
+                                    return `${daysLeft} days Remaining`;
+                                })()}
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div className="flex justify-between items-center mt-4 pt-3 border-t border-white/10">
-                <div className="flex space-x-2">
+            <div className="flex justify-between items-center mt-6 pt-5 border-t border-white/5 relative z-10">
+                <div className="flex gap-2">
                     <Button
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         onClick={(e) => {
                             e.stopPropagation();
                             if (onEdit) onEdit();
                         }}
-                        className="text-blue-400 hover:text-blue-300 h-8 px-2"
+                        className="text-white/40 hover:text-blue-400 hover:bg-blue-500/10 rounded-xl transition-all"
                     >
-                        <Edit className="h-3 w-3" />
+                        <Edit className="h-4 w-4" />
                     </Button>
                     <Button
                         variant="ghost"
-                        size="sm"
+                        size="icon"
                         onClick={(e) => {
                             e.stopPropagation();
                             if (onDelete) onDelete();
                         }}
-                        className="text-red-400 hover:text-red-300 h-8 px-2"
+                        className="text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all"
                     >
-                        <Trash2 className="h-3 w-3" />
+                        <Trash2 className="h-4 w-4" />
                     </Button>
-
-                    {/* Payment Received button */}
+                </div>
+                
+                <div className="flex gap-2">
+                    {remainder.receiptImage && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                if (onViewReceipt) onViewReceipt();
+                            }}
+                            className="text-green-400 hover:bg-green-500/10 rounded-xl transition-all"
+                        >
+                            <Eye className="h-4 w-4" />
+                        </Button>
+                    )}
                     <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         onClick={(e) => {
                             e.stopPropagation();
                             if (onArchive) onArchive();
                         }}
-                        className="text-green-400 hover:text-green-300 h-8 px-2"
-                        title="Mark payment received and archive"
+                        className="bg-green-500/10 hover:bg-green-500/20 text-green-400 border-green-500/20 font-bold text-xs px-4 rounded-xl transition-all"
                     >
-                        Payment Received
+                        Paid
                     </Button>
                 </div>
-                {remainder.receiptImage && (
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            if (onViewReceipt) onViewReceipt();
-                        }}
-                        className="text-green-400 hover:text-green-300 h-8 px-2"
-                    >
-                        <Eye className="h-3 w-3" />
-                    </Button>
-                )}
             </div>
         </div>
     );
