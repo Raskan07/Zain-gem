@@ -26,7 +26,8 @@
     AlertTriangle,
     Upload,  
     X,
-    Eye
+    Eye,
+    ReceiptText
   } from "lucide-react";
   import { 
     db, 
@@ -60,6 +61,7 @@
   } from "firebase/storage";
   import { storage } from "@/lib/firebase";
 import { logActivity } from "@/lib/logger";
+import { useRouter } from "next/navigation";
 
   // Type definitions
   interface Stone {
@@ -83,6 +85,7 @@ import { logActivity } from "@/lib/logger";
     updatedAt: Date;
     customId?: string; // zero-padded display id, e.g. "001"
     customIdNum?: number; // numeric id for ordering
+    duration?: string;
   }
 
   interface NewStone {
@@ -99,6 +102,7 @@ import { logActivity } from "@/lib/logger";
     soldPrice: number;
     treatment: "Natural" | "Heat" | "Electric";
     images?: string[];
+    duration?: string;
   }
 
   export default function StonesPage() {
@@ -111,6 +115,7 @@ import { logActivity } from "@/lib/logger";
     const [nameFilter, setNameFilter] = useState("all");
     const [selectedImage, setSelectedImage] = useState<string | null>(null);
     const [showImageModal, setShowImageModal] = useState(false);
+    const router = useRouter();
 
     // Calculate summary data
     const totalStones = stones.length;
@@ -353,6 +358,7 @@ import { logActivity } from "@/lib/logger";
             updatedAt: updatedAtDate,
             customId: data.customId || undefined,
             customIdNum: data.customIdNum || undefined,
+            duration: data.duration || undefined,
           });
         });
         setStones(stonesData);
@@ -787,6 +793,14 @@ import { logActivity } from "@/lib/logger";
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => router.push(`/dashboard/stones/${stone.id}/invoice`)}
+                              className="text-white/60 hover:text-white hover:bg-purple-500/20 rounded-xl"
+                            >
+                              <ReceiptText className="h-4 w-4" />
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -932,6 +946,7 @@ import { logActivity } from "@/lib/logger";
       priceToSell: 0,
       soldPrice: 0,
       treatment: "Natural",
+      duration: "",
       images: []
     });
     const [uploadedImages, setUploadedImages] = useState<string[]>([]);
@@ -1103,6 +1118,17 @@ import { logActivity } from "@/lib/logger";
               required
             />
           </div>
+          <div>
+            <Label htmlFor="duration">Duration</Label>
+            <Input
+              id="duration"
+              type="text"
+              value={formData.duration || ""}
+              onChange={(e) => setFormData({...formData, duration: e.target.value})}
+              className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4"
+              placeholder="e.g. 1 Month"
+            />
+          </div>
         </div>
 
         {/* Total Cost Display */}
@@ -1250,7 +1276,8 @@ import { logActivity } from "@/lib/logger";
       status: stone.status,
       priceToSell: stone.priceToSell,
       soldPrice: stone.soldPrice,
-      treatment: stone.treatment
+      treatment: stone.treatment,
+      duration: stone.duration || ""
     });
     const [uploadedImages, setUploadedImages] = useState<string[]>(stone.images || []);
     const [uploadingImages, setUploadingImages] = useState(false);
@@ -1420,6 +1447,17 @@ import { logActivity } from "@/lib/logger";
                 className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4"
                 required
               />
+          </div>
+          <div>
+            <Label htmlFor="edit-duration">Duration</Label>
+            <Input
+              id="edit-duration"
+              type="text"
+              value={formData.duration || ""}
+              onChange={(e) => setFormData({...formData, duration: e.target.value})}
+              className="h-14 backdrop-blur-3xl bg-white/5 border-white/10 text-white rounded-2xl focus:bg-white/10 transition-all shadow-inner px-4"
+              placeholder="e.g. 1 Month"
+            />
           </div>
         </div>
 
