@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Plus, Edit, Trash2, Eye, Upload, X, Archive, ArrowRight, TrendingUp, User } from "lucide-react";
+import { CalendarIcon, Plus, Edit, Trash2, Eye, Upload, X, Archive, ArrowRight, TrendingUp, User, Download } from "lucide-react";
 import { format, differenceInDays, parseISO, isAfter, isBefore } from "date-fns";
 import { cn } from "@/lib/utils";
 import { db, storage } from "@/lib/firebase";
@@ -290,6 +290,25 @@ export default function RemaindersPage() {
     setShowReceiptModal(true);
   };
 
+  const handleDownloadImage = async (url: string, filename: string) => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error('Network response was not ok');
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error('Error downloading image, falling back to new tab', error);
+      window.open(url, '_blank');
+    }
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "paid":
@@ -344,6 +363,20 @@ export default function RemaindersPage() {
       alert("Failed to archive remainder. See console for details.");
     }
   };
+
+  // Additional Stats
+  const totalActive = remainders.length;
+  const totalAwaitingProfits = remainders.reduce((sum, r) => sum + (r.myProfit || 0), 0);
+  const overdueRemainders = remainders.filter(r => getCurrentStatus(r.paymentReceivingDate, r.status) === "overdue");
+  const overdueCount = overdueRemainders.length;
+  
+  // Find nearest upcoming payment date that is not overdue
+  const pendingRemainders = remainders.filter(r => getCurrentStatus(r.paymentReceivingDate, r.status) === "pending");
+  const nearestUpcoming = pendingRemainders.length > 0 
+    ? pendingRemainders.reduce((nearest, current) => {
+        return new Date(current.paymentReceivingDate) < new Date(nearest.paymentReceivingDate) ? current : nearest;
+      })
+    : null;
 
   return (
     <div ref={containerRef} className="container mx-auto p-4 md:p-6 lg:p-10 space-y-8 md:space-y-12 min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-900/20 via-slate-950 to-black">
@@ -427,53 +460,60 @@ export default function RemaindersPage() {
       </Dialog>
 
       {/* Summary Cards */}
-      <div ref={summaryRef} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
-        <Card className="group backdrop-blur-3xl bg-white/5 border-white/5 hover:bg-white/10 transition-all duration-500 overflow-hidden relative rounded-3xl p-2">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <CardHeader className="pb-2">
-            <CardTitle className="text-blue-200/40 text-[10px] md:text-xs font-bold uppercase tracking-[0.2em]">Total Remainders</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl md:text-5xl font-black text-white tracking-tighter">{remainders.length}</p>
-          </CardContent>
-        </Card>
+      <div ref={summaryRef} className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         
-        <Card className="group backdrop-blur-3xl bg-white/5 border-white/5 hover:bg-white/10 transition-all duration-500 overflow-hidden relative border-l-yellow-500/50 border-l-4 rounded-3xl p-2">
-          <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <CardHeader className="pb-2">
-            <CardTitle className="text-yellow-200/40 text-[10px] md:text-xs font-bold uppercase tracking-[0.2em]">Pending</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl md:text-5xl font-black text-yellow-400 tracking-tighter">
-              {remainders.filter(r => getCurrentStatus(r.paymentReceivingDate, r.status) === "pending").length}
-            </p>
-          </CardContent>
-        </Card>
+        {/* Total Active Remainders */}
+        <div className="bg-gradient-to-br from-blue-500/10 to-transparent border border-blue-500/20 p-5 md:p-6 rounded-3xl flex flex-col justify-center relative overflow-hidden group hover:bg-blue-500/5 transition-colors">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <TrendingUp className="h-16 w-16 text-blue-400" />
+            </div>
+            <p className="text-[10px] md:text-xs uppercase font-black tracking-[0.2em] text-blue-300/60 mb-2">Total Active</p>
+            <p className="text-3xl md:text-4xl font-black text-white tracking-tighter">{totalActive}</p>
+        </div>
 
-        <Card className="group backdrop-blur-3xl bg-white/5 border-white/5 hover:bg-white/10 transition-all duration-500 overflow-hidden relative border-l-red-500/50 border-l-4 rounded-3xl p-2">
-          <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <CardHeader className="pb-2">
-            <CardTitle className="text-red-200/40 text-[10px] md:text-xs font-bold uppercase tracking-[0.2em]">Overdue</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl md:text-5xl font-black text-red-500 tracking-tighter">
-              {remainders.filter(r => getCurrentStatus(r.paymentReceivingDate, r.status) === "overdue").length}
+        {/* Total Awaiting Profits */}
+        <div className="bg-gradient-to-br from-green-500/10 to-transparent border border-green-500/20 p-5 md:p-6 rounded-3xl flex flex-col justify-center relative overflow-hidden group hover:bg-green-500/5 transition-colors">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <TrendingUp className="h-16 w-16 text-green-400" />
+            </div>
+            <p className="text-[10px] md:text-xs uppercase font-black tracking-[0.2em] text-green-300/60 mb-2">Awaiting Profits</p>
+            <p className="text-2xl md:text-3xl font-black text-green-400 tracking-tighter">
+                <span className="text-sm font-bold opacity-50 mr-1">LKR</span>
+                {totalAwaitingProfits.toLocaleString()}
             </p>
-          </CardContent>
-        </Card>
+        </div>
 
-        <Card className="group backdrop-blur-3xl bg-white/5 border-white/5 hover:bg-white/10 transition-all duration-500 overflow-hidden relative border-l-green-500/50 border-l-4 rounded-3xl p-2">
-          <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <CardHeader className="pb-2">
-            <CardTitle className="text-green-200/40 text-[10px] md:text-xs font-bold uppercase tracking-[0.2em]">Total Value</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl md:text-4xl font-black text-green-400 tracking-tighter">
-              <span className="text-xs font-medium opacity-40 mr-1">LKR</span>
-              {remainders.reduce((sum, r) => sum + r.sellingPrice, 0).toLocaleString()}
-            </p>
-          </CardContent>
-        </Card>
+        {/* Overdue Status */}
+        <div className="bg-gradient-to-br from-red-500/10 to-transparent border border-red-500/20 p-5 md:p-6 rounded-3xl flex flex-col justify-center relative overflow-hidden group hover:bg-red-500/5 transition-colors">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <TrendingUp className="h-16 w-16 text-red-500 rotate-180" />
+            </div>
+            <p className="text-[10px] md:text-xs uppercase font-black tracking-[0.2em] text-red-300/60 mb-2">Overdue Status</p>
+            <div className="flex items-baseline gap-2">
+               <p className="text-3xl md:text-4xl font-black text-red-500 tracking-tighter">{overdueCount}</p>
+               <span className="text-xs font-bold text-red-400/60 uppercase">Records</span>
+            </div>
+        </div>
+
+        {/* Next Upcoming Payment */}
+        <div className="bg-gradient-to-br from-amber-500/10 to-transparent border border-amber-500/20 p-5 md:p-6 rounded-3xl flex flex-col justify-center relative overflow-hidden group hover:bg-amber-500/5 transition-colors">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                <CalendarIcon className="h-16 w-16 text-amber-400" />
+            </div>
+            <p className="text-[10px] md:text-xs uppercase font-black tracking-[0.2em] text-amber-300/60 mb-2">Next Payment</p>
+            {nearestUpcoming ? (
+              <div>
+                <p className="text-xl md:text-2xl font-black text-amber-400 tracking-tighter truncate">
+                  {format(new Date(nearestUpcoming.paymentReceivingDate), "MMM dd")}
+                </p>
+                <p className="text-[10px] font-bold text-amber-400/60 mt-1 truncate">
+                  {nearestUpcoming.stoneName}
+                </p>
+              </div>
+            ) : (
+              <p className="text-lg md:text-xl font-bold text-amber-400/50">None Upcoming</p>
+            )}
+        </div>
 
       </div>
 
@@ -531,8 +571,18 @@ export default function RemaindersPage() {
       {/* Receipt Image Modal */}
       <Dialog open={showReceiptModal} onOpenChange={setShowReceiptModal}>
         <DialogContent className="max-w-4xl backdrop-blur-3xl bg-slate-950/80 border border-white/10 text-white rounded-3xl shadow-3xl">
-          <DialogHeader>
+          <DialogHeader className="flex flex-row items-center justify-between p-6 pb-0">
             <DialogTitle className="text-2xl font-bold">Transaction Receipt</DialogTitle>
+            {selectedReceipt && (
+              <Button
+                variant="outline"
+                className="bg-white/5 border-white/10 hover:bg-white/10 text-white"
+                onClick={() => handleDownloadImage(selectedReceipt, `Receipt-${selectedRemainder?.stoneName || 'Transaction'}.jpg`)}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download
+              </Button>
+            )}
           </DialogHeader>
           <div className="flex justify-center p-4">
             {selectedReceipt && (
