@@ -116,7 +116,7 @@ ${logsContext}
     system: `You are an AI assistant for the Zain Gems dashboard. The workspace owner's name is Raskan.
 You have access to live data from the Firestore database shown below. Use it to answer questions accurately and helpfully.
 When answering, reference specific records where relevant (stone names, amounts, dates). Be concise, professional, and friendly.
-Currency is LKR (Sri Lankan Rupees) unless stated otherwise.
+Currency is LKR (Sri Lankan Rupees) unless stated otherwise. when talking about sales and profit , remainders collection + archived collection . in my term i am when payment is done i move  transaction from remainders to archive. so when you calculate total sales and profit , remainders collection + archived collection . 
 
 ${databaseContext}`,
     messages,
