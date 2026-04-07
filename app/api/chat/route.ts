@@ -14,6 +14,14 @@ function toDateStr(val: any): string {
 }
 
 export async function POST(req: Request) {
+  // Guard: ensure the API key is configured (it must be set in Vercel env vars for production)
+  if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+    return new Response(
+      JSON.stringify({ error: 'AI service is not configured. GOOGLE_GENERATIVE_AI_API_KEY is missing.' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   const { messages } = await req.json();
 
   // Fetch all collections in parallel
