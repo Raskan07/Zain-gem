@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Plus, Edit, Trash2, Eye, Upload, X, Archive, ArrowRight, TrendingUp, User, Download } from "lucide-react";
+import { CalendarIcon, Plus, Edit, Trash2, Eye, Upload, X, Archive, ArrowRight, TrendingUp, User, Download, Search, Filter } from "lucide-react";
 import { format, differenceInDays, parseISO, isAfter, isBefore } from "date-fns";
 import { cn } from "@/lib/utils";
 import { db, storage } from "@/lib/firebase";
@@ -79,11 +79,59 @@ export default function RemaindersPage() {
   const [selectedRemainder, setSelectedRemainder] = useState<Remainder | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "overdue">("all");
+
+  // Helper function to calculate days remaining from today
+  const calculateDaysRemaining = (paymentDate: Date | string) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
+    const payment = typeof paymentDate === 'string' ? new Date(paymentDate) : new Date(paymentDate);
+    payment.setHours(0, 0, 0, 0);
+    return differenceInDays(payment, today);
+  };
+
+  // Helper function to get current status based on payment date
+  const getCurrentStatus = (paymentDate: Date, originalStatus: string) => {
+    if (originalStatus === "paid") return "paid";
+    const daysRemaining = calculateDaysRemaining(paymentDate);
+    return daysRemaining < 0 ? "overdue" : "pending";
+  };
+
+  const filteredAndSortedRemainders = remainders
+    .filter(r => {
+      if (statusFilter !== "all") {
+        const currentStatus = getCurrentStatus(r.paymentReceivingDate, r.status);
+        if (currentStatus !== statusFilter) return false;
+      }
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchName = r.stoneName.toLowerCase().includes(query);
+        const matchOwnerName = (r.ownerName || "").toLowerCase().includes(query);
+        const matchOwnerType = r.stoneOwner.toLowerCase().includes(query);
+        return matchName || matchOwnerName || matchOwnerType;
+      }
+      return true;
+    })
+    .sort((a, b) => {
+      const statusA = getCurrentStatus(a.paymentReceivingDate, a.status);
+      const statusB = getCurrentStatus(b.paymentReceivingDate, b.status);
+      
+      if (statusA === "overdue" && statusB !== "overdue") return -1;
+      if (statusA !== "overdue" && statusB === "overdue") return 1;
+      
+      return a.paymentReceivingDate.getTime() - b.paymentReceivingDate.getTime();
+    });
 
   const handleExportCSV = async () => {
     setIsExporting(true);
     try {
-      const csvData = remainders.map(r => ({
+      if (filteredAndSortedRemainders.length === 0) {
+        alert("No data available to export");
+        return;
+      }
+      
+      const csvData = filteredAndSortedRemainders.map(r => ({
         'Stone Name': r.stoneName,
         'Stone Weight': r.stoneWeight,
         'Stone Cost': r.stoneCost,
@@ -138,22 +186,6 @@ export default function RemaindersPage() {
     });
     return () => unsubscribe();
   }, []);
-
-  // Helper function to calculate days remaining from today
-  const calculateDaysRemaining = (paymentDate: Date | string) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset time to start of day for accurate comparison
-    const payment = typeof paymentDate === 'string' ? new Date(paymentDate) : new Date(paymentDate);
-    payment.setHours(0, 0, 0, 0);
-    return differenceInDays(payment, today);
-  };
-
-  // Helper function to get current status based on payment date
-  const getCurrentStatus = (paymentDate: Date, originalStatus: string) => {
-    if (originalStatus === "paid") return "paid";
-    const daysRemaining = calculateDaysRemaining(paymentDate);
-    return daysRemaining < 0 ? "overdue" : "pending";
-  };
 
   // Fetch remainders from Firebase
   useEffect(() => {
@@ -409,7 +441,7 @@ export default function RemaindersPage() {
                 from: format(new Date(), 'yyyy-MM-dd'), 
                 to: format(new Date(), 'yyyy-MM-dd') 
               },
-              reminders: remainders.map(r => ({
+              reminders: filteredAndSortedRemainders.map(r => ({
                 title: r.stoneName,
                 dueDate: r.paymentReceivingDate,
                 status: r.status,
@@ -517,18 +549,58 @@ export default function RemaindersPage() {
 
       </div>
 
+      {/* Filters UI */}
+      <div className="flex flex-col md:flex-row gap-4 relative z-10 w-full animate-in fade-in py-4 mb-2">
+        <div className="relative flex-1 group">
+          <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-white/40 group-focus-within:text-blue-400 transition-colors">
+            <Search className="h-5 w-5" />
+          </div>
+          <Input 
+            placeholder="Search by stone name or owner..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-12 h-14 bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-2xl focus:bg-white/10 transition-all border shadow-[0_4px_20px_rgba(0,0,0,0.1)] focus:ring-2 focus:ring-blue-500/50"
+          />
+        </div>
+        <div className="w-full md:w-64">
+           <Select value={statusFilter} onValueChange={(val: any) => setStatusFilter(val)}>
+              <SelectTrigger className="h-14 bg-white/5 border-white/10 text-white rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.1)] focus:ring-2 focus:ring-blue-500/50">
+                <div className="flex items-center gap-2">
+                   <Filter className="h-4 w-4 text-white/50" />
+                   <SelectValue placeholder="All Statuses" />
+                </div>
+              </SelectTrigger>
+              <SelectContent className="bg-slate-900 border-white/10 text-white rounded-2xl shadow-xl">
+                 <SelectItem value="all">All Reminders</SelectItem>
+                 <SelectItem value="pending">Pending</SelectItem>
+                 <SelectItem value="overdue">Overdue</SelectItem>
+              </SelectContent>
+           </Select>
+        </div>
+      </div>
+
       {/* Compact Remainders Table */}
       <Card ref={cardsContainerRef} className="backdrop-blur-[80px] bg-white/[0.02] border-white/5 shadow-[0_0_50px_rgba(0,0,0,0.3)] rounded-[3rem] overflow-hidden">
-        <CardHeader className="border-b border-white/5 bg-white/5 px-6 md:px-12 py-8">
+        <CardHeader className="border-b border-white/5 bg-white/5 px-6 md:px-12 py-8 flex flex-row items-center justify-between">
           <CardTitle className="text-2xl md:text-3xl font-black text-white flex items-center gap-4">
             <div className="h-3 w-3 rounded-full bg-blue-500 animate-pulse shadow-[0_0_15px_rgba(59,130,246,0.8)]" />
             Active Records
+            <Badge variant="secondary" className="bg-white/10 text-white ml-2 rounded-xl px-3 border-none hover:bg-white/20">
+                {filteredAndSortedRemainders.length}
+            </Badge>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6 md:p-12">
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-10">
-            {remainders.map((remainder) => (
-              <CustomCard
+          {filteredAndSortedRemainders.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-white/50 animate-in fade-in zoom-in duration-500">
+                <Search className="h-16 w-16 mb-4 opacity-50 text-blue-400" />
+                <p className="text-3xl font-bold text-white mb-2">No records found</p>
+                <p className="text-base text-white/60">Try modifying your text search or filter options.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-10">
+              {filteredAndSortedRemainders.map((remainder) => (
+                <CustomCard
                 key={remainder.id}
                 remainder={remainder}
                 onDetail={() => {
@@ -544,6 +616,7 @@ export default function RemaindersPage() {
               />
             ))}
           </div>
+          )}
         </CardContent>
       </Card>
 

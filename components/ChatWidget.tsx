@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { MessageSquare, X, Send, Bot, User, Loader2 } from 'lucide-react';
+import { MessageSquare, X, Send, Bot, User, Loader2, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 type Message = {
   id: string;
@@ -16,10 +18,26 @@ export default function ChatWidget() {
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [profileUrl, setProfileUrl] = useState<string | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const docRef = doc(db, "profiles", "user-id-placeholder");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setProfileUrl(docSnap.data().photoURL || null);
+        }
+      } catch (err) {
+        console.error("Failed to load profile", err);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +56,6 @@ export default function ChatWidget() {
       content: '',
     };
 
-    // Snapshot the history to send
     const history = [...messages, userMessage].map(({ role, content }) => ({
       role,
       content,
@@ -93,127 +110,155 @@ export default function ChatWidget() {
       {/* Floating Chat Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className={`fixed bottom-6 right-6 p-4 rounded-full shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 z-50 flex items-center justify-center bg-neutral-900 text-white dark:bg-white dark:text-black ${
+        className={`fixed bottom-8 right-8 p-4 rounded-full shadow-[0_0_40px_rgba(234,179,8,0.3)] hover:shadow-[0_0_60px_rgba(234,179,8,0.5)] hover:-translate-y-2 transition-all duration-500 z-50 flex items-center justify-center bg-primary text-primary-foreground border border-white/20 ${
           isOpen ? 'scale-0 opacity-0 pointer-events-none' : 'scale-100 opacity-100'
         }`}
         aria-label="Open AI Assistant"
       >
-        <MessageSquare size={24} />
+        <div className="absolute inset-0 rounded-full bg-primary animate-ping opacity-20" />
+        <Sparkles size={28} className="relative z-10" />
       </button>
 
       {/* Chat Popover */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            initial={{ opacity: 0, y: 30, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            transition={{ duration: 0.2 }}
-            className="fixed bottom-6 right-6 w-[380px] h-[600px] max-h-[80vh] max-w-[calc(100vw-3rem)] bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-2xl z-50 flex flex-col overflow-hidden"
+            exit={{ opacity: 0, y: 30, scale: 0.9, filter: 'blur(10px)' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="fixed bottom-8 right-8 w-[420px] h-[650px] max-h-[85vh] max-w-[calc(100vw-2rem)] bg-card/80 backdrop-blur-3xl border border-white/10 rounded-[40px] shadow-[0_32px_128px_-32px_rgba(0,0,0,0.8)] z-50 flex flex-col overflow-hidden"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 bg-neutral-100 dark:bg-neutral-950 border-b border-neutral-200 dark:border-neutral-800">
-              <div className="flex items-center space-x-2">
-                <div className="p-1.5 bg-blue-500/10 text-blue-500 rounded-lg">
-                  <Bot size={20} />
+            <div className="flex items-center justify-between px-6 py-5 bg-gradient-to-b from-white/10 to-transparent border-b border-white/5">
+              <div className="flex items-center space-x-4">
+                <div className="relative flex items-center justify-center p-2.5 bg-primary/20 text-primary rounded-2xl border border-primary/30 shadow-[0_0_20px_rgba(234,179,8,0.2)]">
+                  <Bot size={24} />
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-background animate-pulse" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm">Gems AI Assistant</h3>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                    Ask about workspace &amp; data
+                  <h3 className="font-bold text-lg text-foreground tracking-tight">Gems AI</h3>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-widest">
+                    Intelligent Assistant
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-1.5 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 rounded-lg hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
+                className="p-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-secondary/80 transition-all border border-transparent hover:border-white/5"
               >
                 <X size={20} />
               </button>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
               {messages.length === 0 && (
-                <div className="flex flex-col items-center justify-center h-full text-center space-y-3 text-neutral-500">
-                  <div className="p-4 bg-neutral-100 dark:bg-neutral-800 rounded-full">
-                    <Bot size={32} className="text-neutral-400 dark:text-neutral-500" />
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="flex flex-col items-center justify-center h-full text-center space-y-4 text-muted-foreground mt-8"
+                >
+                  <div className="relative p-6 bg-secondary/50 rounded-full border border-white/5 shadow-inner">
+                    <Sparkles size={40} className="text-primary/70" />
+                    <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full -z-10" />
                   </div>
-                  <p className="text-sm">
-                    Hi! I&apos;m your AI assistant. Ask me anything about your stones, sales, or
-                    workspace stats.
-                  </p>
-                </div>
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-foreground/80">Hello there!</p>
+                    <p className="text-xs max-w-[250px] mx-auto text-muted-foreground/80 leading-relaxed">
+                      I&apos;m your AI assistant. Ask me anything about your stones, sales, or workspace stats.
+                    </p>
+                  </div>
+                </motion.div>
               )}
 
-              {messages.map((m) => (
-                <div
+              {messages.map((m, index) => (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.2 }}
                   key={m.id}
                   className={`flex w-full ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`flex max-w-[85%] space-x-2 ${
-                      m.role === 'user' ? 'flex-row-reverse space-x-reverse' : 'flex-row'
+                    className={`flex max-w-[85%] gap-3 ${
+                      m.role === 'user' ? 'flex-row-reverse' : 'flex-row'
                     }`}
                   >
                     <div
-                      className={`flex-shrink-0 mt-1 h-8 w-8 rounded-full flex items-center justify-center ${
+                      className={`flex-shrink-0 mt-auto mb-1 h-9 w-9 rounded-full flex items-center justify-center overflow-hidden border ${
                         m.role === 'user'
-                          ? 'bg-neutral-900 text-white dark:bg-white dark:text-black'
-                          : 'bg-blue-500/10 text-blue-500'
+                          ? 'border-primary/30 shadow-[0_0_15px_rgba(234,179,8,0.2)] bg-secondary'
+                          : 'bg-primary/10 text-primary border-primary/20'
                       }`}
                     >
-                      {m.role === 'user' ? <User size={16} /> : <Bot size={16} />}
-                    </div>
-                    <div
-                      className={`px-4 py-2 rounded-2xl text-sm whitespace-pre-wrap break-words ${
-                        m.role === 'user'
-                          ? 'bg-neutral-900 text-white dark:bg-white dark:text-black rounded-tr-sm'
-                          : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 rounded-tl-sm'
-                      }`}
-                    >
-                      {m.content || (
-                        <span className="flex items-center space-x-1 opacity-60">
-                          <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce" />
-                          <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce [animation-delay:0.15s]" />
-                          <span className="w-1.5 h-1.5 bg-current rounded-full animate-bounce [animation-delay:0.3s]" />
-                        </span>
+                      {m.role === 'user' ? (
+                        profileUrl ? (
+                          <img src={profileUrl} alt="User" className="w-full h-full object-cover" />
+                        ) : (
+                          <User size={16} className="text-foreground/70" />
+                        )
+                      ) : (
+                        <Bot size={18} />
                       )}
                     </div>
+                    <div
+                      className={`px-5 py-3.5 text-[15px] leading-relaxed shadow-sm ${
+                        m.role === 'user'
+                          ? 'bg-primary text-primary-foreground rounded-[24px] rounded-br-[8px] shadow-[0_4px_20px_rgba(234,179,8,0.25)] font-medium'
+                          : 'bg-secondary/60 backdrop-blur-md text-foreground border border-white/5 rounded-[24px] rounded-bl-[8px]'
+                      }`}
+                    >
+                      <div className="whitespace-pre-wrap break-words">
+                        {m.content || (
+                          <span className="flex items-center space-x-1.5 opacity-60 h-6">
+                            <span className="w-1.5 h-1.5 bg-current rounded-full animate-[bounce_1s_infinite_0.0s]" />
+                            <span className="w-1.5 h-1.5 bg-current rounded-full animate-[bounce_1s_infinite_0.15s]" />
+                            <span className="w-1.5 h-1.5 bg-current rounded-full animate-[bounce_1s_infinite_0.3s]" />
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                </motion.div>
               ))}
 
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input */}
-            <form
-              onSubmit={handleSend}
-              className="p-3 bg-white dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-800"
-            >
-              <div className="relative flex items-center">
+            {/* Input Form */}
+            <div className="p-4 bg-background/50 backdrop-blur-xl border-t border-white/5">
+              <form
+                onSubmit={handleSend}
+                className="relative flex items-center bg-secondary/80 rounded-full border border-white/5 shadow-inner p-1.5 focus-within:ring-2 focus-within:ring-primary/50 focus-within:bg-secondary transition-all"
+              >
                 <input
                   type="text"
                   value={inputValue}
                   onChange={(e) => setInputValue(e.target.value)}
-                  placeholder="Ask a question..."
+                  placeholder="Type a message..."
                   disabled={isLoading}
-                  className="w-full pl-4 pr-12 py-3 bg-neutral-100 dark:bg-neutral-800 border-none rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-neutral-300 dark:focus:ring-neutral-700 transition-shadow disabled:opacity-50"
+                  className="w-full pl-5 pr-14 py-3 bg-transparent border-none text-sm placeholder:text-muted-foreground/60 focus:outline-none text-foreground disabled:opacity-50"
                 />
                 <button
                   type="submit"
                   disabled={isLoading || !inputValue.trim()}
-                  className="absolute right-2 p-1.5 text-neutral-500 hover:text-neutral-900 dark:hover:text-neutral-100 disabled:opacity-40 transition-colors bg-white dark:bg-neutral-700/50 rounded-lg shadow-sm"
+                  className="absolute right-2 p-2.5 text-primary-foreground bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:hover:bg-primary transition-all rounded-full shadow-md"
                 >
                   {isLoading ? (
                     <Loader2 size={18} className="animate-spin" />
                   ) : (
-                    <Send size={18} />
+                    <Send size={18} className="ml-0.5" />
                   )}
                 </button>
+              </form>
+              <div className="text-center mt-3">
+                <span className="text-[10px] font-medium uppercase tracking-[0.2em] text-muted-foreground/40">
+                  Powered by Gems AI
+                </span>
               </div>
-            </form>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
